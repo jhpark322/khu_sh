@@ -337,10 +337,15 @@ function startGeolocation() {
       setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
       checkPlaceProximity(state.userLocation.lat, state.userLocation.lng);
     },
-    () => {
-      setGeoPill("위치 권한 필요", false);
+    err => {
+      const msg = err.code === 1 ? "위치 권한 거부됨"
+                : err.code === 2 ? "위치 신호 없음"
+                : err.code === 3 ? "위치 확인 시간 초과"
+                : "위치 확인 실패";
+      setGeoPill(msg, false);
+      console.warn("Geolocation error:", err);
     },
-    { enableHighAccuracy: true, timeout: 10000 }
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
 
   if (state.geoWatchId !== null) navigator.geolocation.clearWatch(state.geoWatchId);
@@ -643,6 +648,7 @@ window.addEventListener("load", () => {
   initializeKakaoMap();
   loadJamendoTracks();
   initOnboarding();
+  startGeolocation();
 });
 
 // ── 온보딩 ────────────────────────────────────────────────────────
