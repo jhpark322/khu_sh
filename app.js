@@ -55,6 +55,8 @@ const state = {
   simulatedTimer: null,
   simulatedProgress: 0,
   promptedPlaces: {},
+  onboardingComplete: false,
+  backgroundDemoNotificationSent: false,
   activeTrack: 0,
   activeTag: "indie",
   tracks: demoTracks,
@@ -192,11 +194,48 @@ function updatePlayerTime(current = 0, duration = 0) {
   if (durationText) durationText.textContent = formatTime(duration);
 }
 
+function getTimeBucket(hour) {
+  if (hour >= 6 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 21) return "evening";
+  return "night";
+}
+
 function recommendationReason(track) {
   if (!track) return "";
   if (track.reason && !/[�]/.test(track.reason)) return track.reason;
   const tags = (track.tags || []).slice(0, 2).join(", ") || "인디";
   return `${track.place} 주변 분위기와 ${tags} 취향이 맞아서 추천했어요.`;
+}
+
+function timeLabel() {
+  const bucket = getTimeBucket(new Date().getHours());
+  return {
+    morning: "아침",
+    afternoon: "오후",
+    evening: "저녁",
+    night: "밤"
+  }[bucket] || "지금";
+}
+
+function recommendationFactors(track, placeOverride = "") {
+  const tags = (track?.tags || []).filter(Boolean).slice(0, 2);
+  return [
+    { label: "장소", value: placeOverride || track?.place || "현재 위치" },
+    { label: "취향", value: tags.length ? tags.join(", ") : state.activeTag || "indie" },
+    { label: "시간", value: `${timeLabel()} 시간대` },
+    { label: "거리", value: `${Math.round(track?.distance || 0)}m 근처` }
+  ];
+}
+
+function recommendationFactorHtml(track, placeOverride = "") {
+  return `
+    <span class="recommend-factor-list" aria-label="추천 고려 요소">
+      ${recommendationFactors(track, placeOverride).map(item => `
+        <span><b>${escapeHtml(item.label)}</b>${escapeHtml(item.value)}</span>
+      `).join("")}
+    </span>
+  `;
 }
 
 function nearestPlace(lat, lng) {
@@ -326,6 +365,7 @@ function openMapPlacePanel(placeName) {
       <div>
         <strong>${item.title}</strong>
         <span>${item.artist}</span>
+        ${recommendationFactorHtml(state.tracks.find(track => trackKey(track) === item.id) || item, item.place)}
       </div>
       <small>재생</small>
     `;
@@ -343,6 +383,93 @@ function openMapPlacePanel(placeName) {
 
 function closeMapPlacePanel() {
   mapPlacePanel?.classList.remove("show");
+}
+
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  try {
+    return await Notification.requestPermission() === "granted";
+  } catch {
+    return false;
+  }
+}
+
+function canShowBrowserNotification() {
+  return "Notification" in window && Notification.permission === "granted";
+}
+
+function showBackgroundRecommendationNotification(place, track, message) {
+  if (!canShowBrowserNotification()) return false;
+
+  const notification = new Notification("Where Indi 추천", {
+    body: `${place} · ${track.title}\n${message || recommendationReason(track)}`,
+    tag: `where-indi-${place}`,
+    renotify: true,
+    silent: false
+  });
+
+  notification.onclick = () => {
+    window.focus();
+    const idx = state.tracks.findIndex(item => item.title === track.title);
+    if (idx >= 0) {
+      state.activeTrack = idx;
+      state.unlocked = true;
+      syncListenStateForActiveTrack();
+      renderAll();
+    }
+    setView("map");
+    showPlaceVibeBanner(place, "알림에서 다시 열었어요.", message, track, { forceInApp: true });
+    notification.close();
+  };
+
+  return true;
+}
+
+function triggerBackgroundDemoNotification() {
+  if (!state.onboardingComplete || state.backgroundDemoNotificationSent || !document.hidden) return;
+  const track = currentTrack();
+  if (!track) return;
+
+  state.backgroundDemoNotificationSent = true;
+  const shown = showBackgroundRecommendationNotification(
+    demoSeedPlaceName,
+    track,
+    "앱이 백그라운드에 있어도 현재 위치 추천을 받을 수 있어요."
+  );
+
+  if (!shown) {
+    document.title = `추천 도착 · ${track.title}`;
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    document.title = "Where Indi";
+    return;
+  }
+  window.setTimeout(triggerBackgroundDemoNotification, 1200);
+});
+
+function scheduleBackgroundDemoNotification() {
+  state.backgroundDemoNotificationSent = false;
+  if (document.hidden) {
+    window.setTimeout(triggerBackgroundDemoNotification, 1200);
+  }
+}
+
+function showDemoRecommendationAfterOnboarding() {
+  const track = currentTrack();
+  if (!track) return;
+  window.setTimeout(() => {
+    showPlaceVibeBanner(
+      demoSeedPlaceName,
+      "방금 고른 취향과 현재 위치에 맞춘 첫 추천",
+      recommendationReason(track),
+      track
+    );
+  }, 360);
 }
 
 function setText(selector, value) {
@@ -400,6 +527,7 @@ function renderTrackGrid() {
       <strong>${track.title}</strong>
       <span>${track.artist}</span>
       <span class="track-reason">${recommendationReason(track)}</span>
+      ${recommendationFactorHtml(track)}
     `;
 
     const playBtn = document.createElement("button");
@@ -430,6 +558,13 @@ function renderSelectedTrack() {
   setText("#heroTrackTitle", track.title);
   setText("#heroTrackArtist", meta);
   setText("#heroReason", recommendationReason(track));
+  const heroReason = document.querySelector("#heroReason");
+  if (heroReason) {
+    heroReason.innerHTML = `
+      ${escapeHtml(recommendationReason(track))}
+      ${recommendationFactorHtml(track)}
+    `;
+  }
   setText("#dropTitle", track.title);
   setText("#dropMeta", `${track.artist} · ${track.place}`);
   setText("#playerTitle", track.title);
@@ -445,6 +580,7 @@ function renderSelectedTrack() {
   if (distanceBar) distanceBar.style.width = `${Math.max(14, 100 - track.distance)}%`;
 
   setImage(document.querySelector("#dropCover"), track.image);
+  setImage(document.querySelector("#homeNowCover"), track.image);
   setImage(document.querySelector("#playerCover"), track.image);
   setImage(document.querySelector("#miniCover"), track.image);
 
@@ -1032,7 +1168,6 @@ async function loadJamendoTracks() {
     state.reviewed = false;
     syncListenStateForActiveTrack();
     if (apiStatus) apiStatus.textContent = `${state.tracks.length}개 트랙 불러옴`;
-    seedDemoSongsAtCurrentLocation();
     renderAll();
     await applyRecommendScores();
     applyAiReasons();
@@ -1172,7 +1307,6 @@ document.querySelector("#merchButton")?.addEventListener("click", async () => {
 });
 
 resetListeningMemoryForDemo();
-seedDemoSongsAtCurrentLocation();
 renderMapMarkers();
 renderAll();
 
@@ -1213,10 +1347,14 @@ function initOnboarding() {
   document.querySelector("#onboardingDone").addEventListener("click", async () => {
     const genres = [...document.querySelectorAll("#genreTags .otag.active")].map(b => b.dataset.value);
     const moods = [...document.querySelectorAll("#moodTags .otag.active")].map(b => b.dataset.value);
+    await requestNotificationPermission();
     await api("POST", "/api/user/prefs", { userId: USER_ID, genres, moods });
+    state.onboardingComplete = true;
     overlay.classList.remove("active");
     await applyRecommendScores();
     applyAiReasons();
+    showDemoRecommendationAfterOnboarding();
+    scheduleBackgroundDemoNotification();
   });
 }
 
@@ -1285,7 +1423,13 @@ function chooseTrackForPlace(placeName) {
   return candidates[0]?.track || currentTrack();
 }
 
-function showPlaceVibeBanner(place, vibe, reason, track) {
+function showPlaceVibeBanner(place, vibe, reason, track, options = {}) {
+  const message = vibe || reason || recommendationReason(track);
+  if (document.hidden && !options.forceInApp) {
+    const notified = showBackgroundRecommendationNotification(place, track, message);
+    if (notified) return;
+  }
+
   const old = document.querySelector(".nearby-recommend-popup");
   if (old) old.remove();
   const visited = state.visitedPlaces[place];
@@ -1298,9 +1442,16 @@ function showPlaceVibeBanner(place, vibe, reason, track) {
     <div class="nrp-card">
       <button class="nrp-close" aria-label="닫기">×</button>
       <span class="nrp-kicker">음악 구역 도착</span>
-      <strong>${track.title}</strong>
+      <div class="nrp-track-head">
+        <img src="${track.image || ""}" alt="${track.title} 앨범 커버">
+        <div>
+          <strong>${track.title}</strong>
+          <span>${track.artist || "Where Indi"}</span>
+        </div>
+      </div>
       <p>${subcopy}</p>
-      <small>${vibe || reason || recommendationReason(track)}</small>
+      <small>${message}</small>
+      ${recommendationFactorHtml(track, place)}
       <div class="nrp-actions">
         <button class="nrp-skip">나중에</button>
         <button class="nrp-play">▶ 재생</button>
