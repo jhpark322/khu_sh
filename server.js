@@ -291,6 +291,6 @@ app.get("/api/creator/dashboard", (req, res) => {
   res.json({ metrics: store.metrics });
 });
 
-app.listen(4173, "127.0.0.1", () => {
-  console.log("Where Indi running at http://127.0.0.1:4173");
+app.listen(4173, "0.0.0.0", () => {
+  console.log("Where Indi running at http://127.0.0.1:4173 and http://localhost:4173");
 });

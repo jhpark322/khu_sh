@@ -638,19 +638,23 @@ renderAll();
 
 document.querySelector(".phone-app").dataset.view = "home";
 
-window.addEventListener("load", () => {
+function bootApp() {
+  console.log("[WhereIndi] booting, USER_ID =", USER_ID);
   const splashScreen = document.querySelector("#splashScreen");
-  window.setTimeout(() => {
-    splashScreen?.classList.add("hide");
-  }, 2000);
-  window.setTimeout(() => {
-    splashScreen?.remove();
-  }, 2400);
-  initializeKakaoMap();
-  loadJamendoTracks();
-  initOnboarding();
-  startGeolocation();
-});
+  window.setTimeout(() => splashScreen?.classList.add("hide"), 2000);
+  window.setTimeout(() => splashScreen?.remove(), 2400);
+
+  try { initializeKakaoMap(); } catch (e) { console.error("kakao init error:", e); }
+  try { initOnboarding(); console.log("[WhereIndi] onboarding init OK"); } catch (e) { console.error("onboarding error:", e); }
+  try { loadJamendoTracks(); } catch (e) { console.error("jamendo error:", e); }
+  try { startGeolocation(); } catch (e) { console.error("geo error:", e); }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootApp);
+} else {
+  bootApp();
+}
 
 // ── 온보딩 ────────────────────────────────────────────────────────
 function initOnboarding() {
