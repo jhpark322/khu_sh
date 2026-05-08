@@ -69,12 +69,8 @@ const reviewResult = document.querySelector("#reviewResult");
 const walletMessage = document.querySelector("#walletMessage");
 const apiStatus = document.querySelector("#apiStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
-const clientInput = document.querySelector("#jamendoClientId");
 const kakaoMapContainer = document.querySelector("#kakaoMap");
 const mapCanvas = document.querySelector(".map-full");
-
-const storedClientId = localStorage.getItem("jamendoClientId");
-if (storedClientId) clientInput.value = storedClientId;
 
 function setView(id) {
   views.forEach((view) => view.classList.toggle("active", view.id === id));
@@ -450,7 +446,7 @@ function normalizeJamendoTrack(track, index) {
 }
 
 async function loadJamendoTracks() {
-  const clientId = clientInput?.value.trim() || "b0af7f33";
+  const clientId = "b0af7f33";
   if (apiStatus) apiStatus.textContent = "Jamendo에서 인디 트랙을 불러오는 중...";
 
   const endpoint = new URL("https://api.jamendo.com/v3.0/tracks/");
@@ -501,7 +497,6 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
   });
 });
 
-document.querySelector("#loadJamendo").addEventListener("click", loadJamendoTracks);
 
 document.querySelector("#unlockButton").addEventListener("click", () => {
   if (!state.unlocked) {
