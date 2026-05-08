@@ -2,11 +2,11 @@ const demoTracks = [
   {
     title: "밤 산책",
     artist: "Blue Room",
-    place: "정문 앞 카페",
+    place: "국제캠 정문 앞",
     distance: 18,
     score: 87,
     tags: ["잔잔함", "밤", "산책"],
-    coords: { lat: 37.5939, lng: 127.0528 },
+    coords: { lat: 37.2412, lng: 127.0795 },
     image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80",
     audio: "",
     reason: "자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다."
@@ -14,11 +14,11 @@ const demoTracks = [
   {
     title: "여름의 계단",
     artist: "Small Wave",
-    place: "학교 중앙광장",
+    place: "노천극장",
     distance: 42,
     score: 79,
     tags: ["청춘", "밴드", "캠퍼스"],
-    coords: { lat: 37.5969, lng: 127.0522 },
+    coords: { lat: 37.2433, lng: 127.0795 },
     image: "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&q=80",
     audio: "",
     reason: "축제 분위기의 중앙광장과 청춘 밴드 사운드가 잘 맞습니다."
@@ -26,11 +26,11 @@ const demoTracks = [
   {
     title: "오래된 책갈피",
     artist: "Noon Archive",
-    place: "독립서점",
+    place: "중앙도서관",
     distance: 71,
     score: 82,
     tags: ["로파이", "독서", "오후"],
-    coords: { lat: 37.5919, lng: 127.055 },
+    coords: { lat: 37.2424, lng: 127.0807 },
     image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=900&q=80",
     audio: "",
     reason: "조용한 독립서점 분위기와 로파이 질감이 잘 어울립니다."
@@ -131,13 +131,14 @@ function currentTrack() {
   return state.tracks[state.activeTrack] || state.tracks[0];
 }
 
+// 경희대 국제캠퍼스 (용인 기흥) 좌표
 const placeCoords = [
-  { lat: 37.5939, lng: 127.0528 },
-  { lat: 37.5969, lng: 127.0522 },
-  { lat: 37.5919, lng: 127.055 },
-  { lat: 37.5977, lng: 127.0506 },
-  { lat: 37.5958, lng: 127.0538 },
-  { lat: 37.5929, lng: 127.0518 }
+  { lat: 37.2412, lng: 127.0795 }, // 정문 앞
+  { lat: 37.2424, lng: 127.0807 }, // 중앙도서관
+  { lat: 37.2433, lng: 127.0795 }, // 노천극장
+  { lat: 37.2420, lng: 127.0820 }, // 학생회관
+  { lat: 37.2438, lng: 127.0815 }, // 외대 앞
+  { lat: 37.2415, lng: 127.0810 }  // 푸른솔
 ];
 
 function coordsForTrack(track, index = state.activeTrack) {
@@ -689,11 +690,14 @@ async function applyAiReasons() {
 }
 
 // GPS 위치 기반 장소 트리거 (50m 이내 진입 시 Gemini 호출)
+// 경희대 국제캠퍼스 장소 (용인 기흥)
 const PLACES = [
-  { name: "정문 앞 카페거리", lat: 37.5939, lng: 127.0528 },
-  { name: "중앙광장", lat: 37.5969, lng: 127.0522 },
-  { name: "독립서점 골목", lat: 37.5919, lng: 127.055 },
-  { name: "노천극장", lat: 37.5977, lng: 127.0506 }
+  { name: "국제캠 정문 앞", lat: 37.2412, lng: 127.0795 },
+  { name: "중앙도서관", lat: 37.2424, lng: 127.0807 },
+  { name: "노천극장", lat: 37.2433, lng: 127.0795 },
+  { name: "학생회관 앞", lat: 37.2420, lng: 127.0820 },
+  { name: "푸른솔문화관", lat: 37.2440, lng: 127.0800 },
+  { name: "외대 광장", lat: 37.2438, lng: 127.0815 }
 ];
 const placeTriggered = new Set();
 
