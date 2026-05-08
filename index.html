@@ -12,7 +12,7 @@
         <span class="brand-mark">WI</span>
         <span>
           <strong>Where Indi</strong>
-          <small>find indie drops nearby</small>
+          <small>indie nearby, now playing</small>
         </span>
       </a>
       <nav class="topnav" aria-label="주요 화면">
@@ -24,7 +24,7 @@
         <button class="nav-button" data-view="creator">창작자</button>
       </nav>
       <div class="wallet-pill">
-        <span>Culture Keys</span>
+        <span>Indi Points</span>
         <strong id="keyBalance">25K</strong>
       </div>
     </header>
@@ -39,8 +39,8 @@
               Where Indi는 학교 앞 카페거리, 공원 벤치, 독립서점 같은 장소를 새로운 인디 음악 지도로 바꾸는 앱입니다.
             </p>
             <div class="hero-actions">
-              <button class="primary-button" data-view-jump="discover">오늘의 드롭 보기</button>
-              <button class="ghost-button" data-view-jump="map">지도에서 해금</button>
+              <button class="primary-button" data-view-jump="discover">오늘의 믹스 듣기</button>
+              <button class="ghost-button" data-view-jump="map">근처 음악 찾기</button>
             </div>
           </section>
 
@@ -50,7 +50,7 @@
               <img id="heroCover" alt="추천 트랙 커버" src="">
             </div>
             <div class="now-copy">
-              <p class="eyebrow">Now dropped near you</p>
+              <p class="eyebrow">Playing near you</p>
               <h2 id="heroTrackTitle">밤 산책</h2>
               <p id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</p>
               <div class="tag-row" id="heroTags">
@@ -69,11 +69,11 @@
           </article>
           <article class="strip-item">
             <strong>30m</strong>
-            <span>현장 해금 반경</span>
+            <span>근처 재생 반경</span>
           </article>
           <article class="strip-item">
             <strong>24h</strong>
-            <span>감상권 유지 시간</span>
+            <span>다시 듣기 가능 시간</span>
           </article>
           <article class="strip-item">
             <strong>+45K</strong>
@@ -85,7 +85,7 @@
       <section id="discover" class="view">
         <div class="section-heading">
           <p class="eyebrow">Jamendo API</p>
-          <h2>실제 인디 트랙을 불러와 드롭으로 배치</h2>
+          <h2>실제 인디 트랙으로 내 주변 믹스 만들기</h2>
         </div>
 
         <div class="discover-layout">
@@ -115,12 +115,12 @@
       <section id="map" class="view">
         <div class="section-heading">
           <p class="eyebrow">Discovery Map</p>
-          <h2>내 동선과 가장 가까운 음악 드롭</h2>
+          <h2>내 주변에서 바로 듣는 인디 트랙</h2>
         </div>
 
         <div class="map-layout">
-          <div class="map-canvas" aria-label="드롭 지도">
-            <svg viewBox="0 0 720 460" role="img" aria-label="경희대 주변 음악 드롭 지도">
+          <div class="map-canvas" aria-label="근처 음악 지도">
+            <svg viewBox="0 0 720 460" role="img" aria-label="경희대 주변 인디 음악 지도">
               <rect class="map-bg" x="0" y="0" width="720" height="460"></rect>
               <path class="road main" d="M42 334 C156 252 248 294 348 218 S558 158 682 90"></path>
               <path class="road sub" d="M116 418 C220 342 305 338 430 288 S590 260 690 212"></path>
@@ -147,14 +147,14 @@
 
           <article class="drop-card">
             <img id="dropCover" alt="선택된 트랙 커버" src="">
-            <p class="eyebrow">Selected Drop</p>
+            <p class="eyebrow">Near You</p>
             <h3 id="dropTitle">밤 산책</h3>
             <p id="dropMeta">Blue Room · 정문 앞 카페 · 18m</p>
             <div class="progress-track">
               <span id="distanceBar"></span>
             </div>
-            <p class="status-text" id="unlockStatus">해금 가능: 반경 안에 있습니다.</p>
-            <button class="primary-button" id="unlockButton">현장 해금</button>
+            <p class="status-text" id="unlockStatus">지금 재생 가능: 가까운 위치입니다.</p>
+            <button class="primary-button" id="unlockButton">근처에서 듣기</button>
             <button class="ghost-button" id="moveCloserButton">데모 위치 이동</button>
           </article>
         </div>
@@ -162,8 +162,8 @@
 
       <section id="track" class="view">
         <div class="section-heading">
-          <p class="eyebrow">Listening Pass</p>
-          <h2>24시간 감상권과 리뷰 리워드</h2>
+          <p class="eyebrow">Now Playing</p>
+          <h2>오늘 들은 트랙과 내 취향 피드백</h2>
         </div>
 
         <div class="track-layout">
@@ -175,10 +175,10 @@
             <div class="player-copy">
               <p class="eyebrow" id="playerArtist">Blue Room</p>
               <h3 id="playerHeading">밤 산책</h3>
-              <p id="passText">아직 해금 전입니다.</p>
+              <p id="passText">근처 음악을 선택하면 바로 재생할 수 있어요.</p>
               <audio id="audioPlayer" controls preload="none"></audio>
               <div class="listen-bar"><span id="listenProgress"></span></div>
-              <button class="primary-button" id="listenButton">70%까지 감상 처리</button>
+              <button class="primary-button" id="listenButton">72%까지 듣기</button>
             </div>
           </article>
 
@@ -195,29 +195,29 @@
             </div>
             <textarea id="reviewText">밤에 카페 앞에서 듣기 좋은 잔잔한 곡이었습니다. 보컬이 담담해서 과하지 않았고, 이 장소의 분위기와 잘 맞았습니다. 친구에게도 추천하고 싶지만 후반부 전개는 조금 단조롭게 느껴졌습니다.</textarea>
             <button class="primary-button" id="submitReview">리뷰 제출</button>
-            <p class="status-text" id="reviewResult">감상률 70% 이상이면 리뷰 리워드를 받을 수 있습니다.</p>
+            <p class="status-text" id="reviewResult">70% 이상 들으면 취향 포인트가 쌓입니다.</p>
           </article>
         </div>
       </section>
 
       <section id="wallet" class="view">
         <div class="section-heading">
-          <p class="eyebrow">Culture Key Wallet</p>
-          <h2>다음 발견과 공연 예약으로 돌아가는 리워드</h2>
+          <p class="eyebrow">Your Library</p>
+          <h2>저장한 음악과 공연 혜택을 한 곳에서</h2>
         </div>
 
         <div class="wallet-grid">
           <article class="reward-panel">
-            <h3>사용 가능한 리워드</h3>
+            <h3>내 음악 혜택</h3>
             <button class="reward-item" id="spendHint">
-              <span>다음 위치 힌트</span>
+              <span>다음 추천 보기</span>
               <strong>10K</strong>
             </button>
             <button class="reward-item" id="applyDiscount">
               <span>공연 할인 적용</span>
               <strong>100K</strong>
             </button>
-            <p class="status-text" id="walletMessage">힌트를 열거나 예약 할인 시뮬레이션을 확인하세요.</p>
+            <p class="status-text" id="walletMessage">추천을 열거나 예약 할인 시뮬레이션을 확인하세요.</p>
           </article>
           <article class="ticket">
             <p class="eyebrow">Booking</p>
@@ -238,7 +238,7 @@
 
         <div class="dashboard-grid">
           <article class="metric"><span>discoveries</span><strong id="metricDiscoveries">120</strong></article>
-          <article class="metric"><span>unlocks</span><strong id="metricUnlocks">86</strong></article>
+          <article class="metric"><span>plays</span><strong id="metricUnlocks">86</strong></article>
           <article class="metric"><span>reviews</span><strong id="metricReviews">28</strong></article>
           <article class="metric"><span>booking clicks</span><strong id="metricBookings">9</strong></article>
         </div>
