@@ -459,6 +459,12 @@ textarea {
   color: #000;
 }
 
+.primary-button:disabled {
+  background: var(--surface-3);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 .ghost-button {
   padding: 0 18px;
   border: 1px solid var(--line);

@@ -49,6 +49,9 @@ const state = {
   kakaoMap: null,
   kakaoMarkers: [],
   kakaoMapReady: false,
+  kakaoUserMarker: null,
+  userLocation: null,
+  geoWatchId: null,
   metrics: {
     discoveries: 120,
     unlocks: 86,
@@ -83,8 +86,9 @@ function setView(id) {
   navButtons.forEach((button) => button.classList.toggle("active", button.dataset.view === id));
   const phoneApp = document.querySelector(".phone-app");
   if (phoneApp) phoneApp.dataset.view = id;
-  if (id === "map" && state.kakaoMapReady) {
-    requestAnimationFrame(renderKakaoMap);
+  if (id === "map") {
+    startGeolocation();
+    if (state.kakaoMapReady) requestAnimationFrame(renderKakaoMap);
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -196,8 +200,16 @@ function renderSelectedTrack() {
     ? "근처에서 재생 중 · 24시간 동안 다시 듣기 가능"
     : "근처 음악을 선택하면 바로 재생할 수 있어요.";
 
-  document.querySelector("#unlockStatus").textContent =
-    track.distance <= 30 ? "지금 재생 가능: 가까운 위치입니다." : "조금 더 가까이 가면 바로 들을 수 있어요.";
+  const canUnlock = track.distance <= 30;
+  const unlockBtn = document.querySelector("#unlockButton");
+  if (unlockBtn) unlockBtn.disabled = !canUnlock && !state.unlocked;
+
+  const gpsActive = state.userLocation !== null;
+  document.querySelector("#unlockStatus").textContent = canUnlock
+    ? "지금 재생 가능: 가까운 위치입니다."
+    : gpsActive
+      ? `현재 ${track.distance}m 거리 · 30m 이내로 이동하면 해금됩니다.`
+      : "조금 더 가까이 가면 바로 들을 수 있어요.";
 
   if (state.kakaoMapReady) renderKakaoMap();
 }
@@ -215,6 +227,85 @@ function renderMapMarkers() {
       renderAll();
     });
   });
+}
+
+function getDistanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const rad = d => d * Math.PI / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLng = rad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function updateRealDistances() {
+  if (!state.userLocation) return;
+  const { lat, lng } = state.userLocation;
+  state.tracks.forEach(track => {
+    if (track.coords) {
+      track.distance = Math.round(getDistanceMeters(lat, lng, track.coords.lat, track.coords.lng));
+    }
+  });
+}
+
+function updateKakaoUserMarker() {
+  if (!state.kakaoMapReady || !window.kakao?.maps || !state.kakaoMap || !state.userLocation) return;
+  const kakao = window.kakao;
+  const pos = new kakao.maps.LatLng(state.userLocation.lat, state.userLocation.lng);
+  const svgBlob = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><circle cx="11" cy="11" r="8" fill="#509bf5" stroke="#fff" stroke-width="3"/></svg>';
+  const markerImage = new kakao.maps.MarkerImage(
+    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgBlob),
+    new kakao.maps.Size(22, 22),
+    { offset: new kakao.maps.Point(11, 11) }
+  );
+  if (state.kakaoUserMarker) {
+    state.kakaoUserMarker.setPosition(pos);
+  } else {
+    state.kakaoUserMarker = new kakao.maps.Marker({
+      map: state.kakaoMap,
+      position: pos,
+      title: "내 위치",
+      image: markerImage,
+      zIndex: 10
+    });
+  }
+}
+
+function startGeolocation() {
+  const geoStatus = document.querySelector("#geoStatus");
+  if (!navigator.geolocation) {
+    if (geoStatus) geoStatus.textContent = "이 브라우저는 GPS를 지원하지 않습니다.";
+    return;
+  }
+  if (geoStatus) geoStatus.textContent = "GPS 위치 확인 중...";
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      updateRealDistances();
+      renderSelectedTrack();
+      renderTrackGrid();
+      if (state.kakaoMapReady) renderKakaoMap();
+      const acc = Math.round(pos.coords.accuracy);
+      if (geoStatus) geoStatus.textContent = `📍 내 위치 확인됨 · 정확도 ±${acc}m`;
+    },
+    err => {
+      if (geoStatus) geoStatus.textContent = "위치 권한을 허용하면 실제 거리로 잠금 해제됩니다.";
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+
+  if (state.geoWatchId !== null) navigator.geolocation.clearWatch(state.geoWatchId);
+  state.geoWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      updateRealDistances();
+      renderSelectedTrack();
+      updateKakaoUserMarker();
+    },
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
 }
 
 function loadKakaoMapsSdk(appKey) {
@@ -313,6 +404,7 @@ function renderKakaoMap() {
 
   state.kakaoMap.setBounds(bounds);
   state.kakaoMap.setCenter(activeCenter);
+  updateKakaoUserMarker();
 
   requestAnimationFrame(() => {
     state.kakaoMap.relayout();
@@ -462,11 +554,15 @@ document.querySelector("#loadJamendo").addEventListener("click", loadJamendoTrac
 document.querySelector("#loadKakaoMap").addEventListener("click", initializeKakaoMap);
 
 document.querySelector("#moveCloserButton").addEventListener("click", () => {
-  const userDot = document.querySelector("#userDot");
-  userDot.setAttribute("cx", "548");
-  userDot.setAttribute("cy", "153");
-  currentTrack().distance = 8;
-  renderSelectedTrack();
+  if (state.userLocation) {
+    startGeolocation();
+  } else {
+    const userDot = document.querySelector("#userDot");
+    userDot.setAttribute("cx", "548");
+    userDot.setAttribute("cy", "153");
+    currentTrack().distance = 8;
+    renderSelectedTrack();
+  }
 });
 
 document.querySelector("#unlockButton").addEventListener("click", () => {
