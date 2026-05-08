@@ -682,7 +682,7 @@ textarea {
   display: grid;
   grid-template-columns: 92px 1fr;
   gap: 12px;
-  margin-top: -58px;
+  margin-top: 12px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 22px;

@@ -247,11 +247,14 @@ function updateKakaoUserMarker() {
   if (!state.kakaoMapReady || !window.kakao?.maps || !state.kakaoMap || !state.userLocation) return;
   const kakao = window.kakao;
   const pos = new kakao.maps.LatLng(state.userLocation.lat, state.userLocation.lng);
-  const svgBlob = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><circle cx="11" cy="11" r="8" fill="#509bf5" stroke="#fff" stroke-width="3"/></svg>';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+    <circle cx="14" cy="14" r="10" fill="#509bf5" stroke="#fff" stroke-width="3"/>
+    <circle cx="14" cy="14" r="4" fill="#fff"/>
+  </svg>`;
   const markerImage = new kakao.maps.MarkerImage(
-    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgBlob),
-    new kakao.maps.Size(22, 22),
-    { offset: new kakao.maps.Point(11, 11) }
+    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg),
+    new kakao.maps.Size(28, 28),
+    { offset: new kakao.maps.Point(14, 14) }
   );
   if (state.kakaoUserMarker) {
     state.kakaoUserMarker.setPosition(pos);
@@ -356,7 +359,7 @@ function renderKakaoMap() {
     bounds.extend(position);
   });
 
-  state.kakaoMap.setBounds(bounds);
+  state.kakaoMap.setLevel(4);
   state.kakaoMap.setCenter(activeCenter);
   updateKakaoUserMarker();
 
