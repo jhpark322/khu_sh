@@ -70,16 +70,11 @@ const walletMessage = document.querySelector("#walletMessage");
 const apiStatus = document.querySelector("#apiStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const clientInput = document.querySelector("#jamendoClientId");
-const kakaoMapKeyInput = document.querySelector("#kakaoMapKey");
-const kakaoMapStatus = document.querySelector("#kakaoMapStatus");
 const kakaoMapContainer = document.querySelector("#kakaoMap");
 const mapCanvas = document.querySelector(".map-canvas");
 
 const storedClientId = localStorage.getItem("jamendoClientId");
 if (storedClientId) clientInput.value = storedClientId;
-
-const storedKakaoMapKey = localStorage.getItem("kakaoMapJavaScriptKey");
-if (storedKakaoMapKey && kakaoMapKeyInput) kakaoMapKeyInput.value = storedKakaoMapKey;
 
 function setView(id) {
   views.forEach((view) => view.classList.toggle("active", view.id === id));
@@ -366,14 +361,10 @@ function renderKakaoMap() {
 }
 
 function initializeKakaoMap() {
-  if (!window.kakao?.maps?.Map) {
-    if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵 로드 실패 — 콘솔(F12)에서 오류를 확인하세요.";
-    return;
-  }
+  if (!window.kakao?.maps?.Map) return;
   state.kakaoMapReady = true;
   mapCanvas?.classList.add("kakao-active");
   renderKakaoMap();
-  if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵 연결 완료.";
 }
 
 function renderAll() {
@@ -492,7 +483,6 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
 });
 
 document.querySelector("#loadJamendo").addEventListener("click", loadJamendoTracks);
-document.querySelector("#loadKakaoMap").addEventListener("click", initializeKakaoMap);
 
 document.querySelector("#moveCloserButton").addEventListener("click", () => {
   if (state.userLocation) {
