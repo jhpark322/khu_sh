@@ -37,11 +37,8 @@ const demoTracks = [
   }
 ];
 
-const USER_ID = localStorage.getItem("windi_uid") || (() => {
-  const id = "u_" + Math.random().toString(36).slice(2, 9);
-  localStorage.setItem("windi_uid", id);
-  return id;
-})();
+// 세션마다 새로 생성 (새로고침하면 온보딩 다시)
+const USER_ID = "u_" + Math.random().toString(36).slice(2, 9);
 
 const state = {
   keys: 25,
@@ -338,6 +335,7 @@ function startGeolocation() {
       renderTrackGrid();
       if (state.kakaoMapReady) renderKakaoMap();
       setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
+      checkPlaceProximity(state.userLocation.lat, state.userLocation.lng);
     },
     () => {
       setGeoPill("위치 권한 필요", false);
@@ -353,6 +351,7 @@ function startGeolocation() {
       renderSelectedTrack();
       updateKakaoUserMarker();
       setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
+      checkPlaceProximity(state.userLocation.lat, state.userLocation.lng);
     },
     () => {},
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
@@ -503,7 +502,8 @@ async function loadJamendoTracks() {
     listenProgress.style.width = "0";
     if (apiStatus) apiStatus.textContent = `${state.tracks.length}개 트랙 불러옴`;
     renderAll();
-    applyRecommendScores();
+    await applyRecommendScores();
+    applyAiReasons();
   } catch (error) {
     state.tracks = demoTracks;
     if (apiStatus) apiStatus.textContent = `${error.message} · 데모 트랙으로 대체`;
@@ -649,9 +649,7 @@ window.addEventListener("load", () => {
 function initOnboarding() {
   const overlay = document.querySelector("#onboardingOverlay");
   if (!overlay) return;
-  const seen = localStorage.getItem("windi_onboarded");
-  if (seen) return;
-
+  // 매 새로고침마다 다시 묻기 - localStorage 안 씀
   overlay.classList.add("active");
 
   document.querySelectorAll("#genreTags .otag").forEach(btn => {
@@ -665,8 +663,79 @@ function initOnboarding() {
     const genres = [...document.querySelectorAll("#genreTags .otag.active")].map(b => b.dataset.value);
     const moods = [...document.querySelectorAll("#moodTags .otag.active")].map(b => b.dataset.value);
     await api("POST", "/api/user/prefs", { userId: USER_ID, genres, moods });
-    localStorage.setItem("windi_onboarded", "1");
     overlay.classList.remove("active");
-    applyRecommendScores();
+    await applyRecommendScores();
+    applyAiReasons();
   });
+}
+
+// Gemini로 추천 이유 텍스트 생성
+async function applyAiReasons() {
+  if (!state.tracks.length) return;
+  const body = { userId: USER_ID, tracks: state.tracks };
+  if (state.userLocation) { body.lat = state.userLocation.lat; body.lng = state.userLocation.lng; }
+  const data = await api("POST", "/api/ai-reasons", body);
+  if (data?.tracks) {
+    state.tracks = data.tracks;
+    renderTrackGrid();
+    renderSelectedTrack();
+  }
+}
+
+// GPS 위치 기반 장소 트리거 (50m 이내 진입 시 Gemini 호출)
+const PLACES = [
+  { name: "정문 앞 카페거리", lat: 37.5939, lng: 127.0528 },
+  { name: "중앙광장", lat: 37.5969, lng: 127.0522 },
+  { name: "독립서점 골목", lat: 37.5919, lng: 127.055 },
+  { name: "노천극장", lat: 37.5977, lng: 127.0506 }
+];
+const placeTriggered = new Set();
+
+function checkPlaceProximity(lat, lng) {
+  for (const p of PLACES) {
+    const d = haversineMeters(lat, lng, p.lat, p.lng);
+    if (d < 60 && !placeTriggered.has(p.name)) {
+      placeTriggered.add(p.name);
+      triggerPlaceVibe(p.name);
+      break;
+    }
+  }
+}
+
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000, rad = d => d * Math.PI / 180;
+  const dLat = rad(lat2 - lat1), dLng = rad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function triggerPlaceVibe(placeName) {
+  const data = await api("POST", "/api/place-vibe", { userId: USER_ID, place: placeName, tracks: state.tracks });
+  if (!data?.track) return;
+  showPlaceVibeBanner(placeName, data.vibe, data.reason, data.track);
+}
+
+function showPlaceVibeBanner(place, vibe, reason, track) {
+  const old = document.querySelector(".place-vibe-banner");
+  if (old) old.remove();
+  const banner = document.createElement("div");
+  banner.className = "place-vibe-banner";
+  banner.innerHTML = `
+    <div class="pvb-pin">📍</div>
+    <div class="pvb-body">
+      <div class="pvb-place">${place}</div>
+      <div class="pvb-vibe">${vibe}</div>
+      <div class="pvb-track">▶ ${track.title} · ${track.artist}</div>
+    </div>
+    <button class="pvb-close" aria-label="닫기">×</button>
+  `;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add("show"));
+  banner.querySelector(".pvb-close").addEventListener("click", () => banner.remove());
+  banner.querySelector(".pvb-body").addEventListener("click", () => {
+    const idx = state.tracks.findIndex(t => t.title === track.title);
+    if (idx >= 0) { state.activeTrack = idx; playTrack(idx); }
+    banner.remove();
+  });
+  setTimeout(() => banner.remove(), 8000);
 }

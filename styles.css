@@ -1109,6 +1109,88 @@ audio {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ── Place vibe banner (GPS triggered) ──────────────────────────── */
+.place-vibe-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-120%);
+  width: calc(100% - 32px);
+  max-width: 420px;
+  background: linear-gradient(135deg, #1ed760, #169e44);
+  color: #051a0c;
+  padding: 14px 16px;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 32px 1fr 24px;
+  gap: 12px;
+  align-items: center;
+  z-index: 250;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+  cursor: pointer;
+}
+
+.place-vibe-banner.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.pvb-pin {
+  font-size: 22px;
+  text-align: center;
+}
+
+.pvb-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pvb-place {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
+}
+
+.pvb-vibe {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.pvb-track {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pvb-close {
+  background: rgba(0, 0, 0, 0.2);
+  border: 0;
+  color: #051a0c;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
 /* ── Track reason label ─────────────────────────────────────────── */
 .track-reason {
   color: var(--muted);

@@ -1,6 +1,27 @@
 const express = require("express");
 const path = require("path");
 
+const GEMINI_API_KEY = "AIzaSyAxIi7qUITYaEGfXA4YC0UyWOtXPE_0GT4";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+async function callGemini(prompt, { maxTokens = 200 } = {}) {
+  try {
+    const res = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.8, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget: 0 } }
+      })
+    });
+    const data = await res.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+  } catch (e) {
+    console.error("Gemini error:", e.message);
+    return "";
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use((req, res, next) => {
@@ -114,7 +135,7 @@ app.post("/api/user/prefs", (req, res) => {
   res.json({ ok: true, prefs: user.prefs });
 });
 
-// 취향 기반 추천
+// 취향 기반 추천 (rule-based)
 app.get("/api/recommend", (req, res) => {
   const { userId, lat, lng, tracks: tracksJson } = req.query;
   const user = getUser(userId || "guest");
@@ -130,6 +151,88 @@ app.get("/api/recommend", (req, res) => {
   }).sort((a, b) => b.score - a.score);
 
   res.json({ timeBucket, tracks: scored });
+});
+
+// Gemini 기반 AI 추천 이유 생성
+app.post("/api/ai-reasons", async (req, res) => {
+  const { userId, tracks, lat, lng } = req.body;
+  const user = getUser(userId || "guest");
+  const hour = new Date().getHours();
+  const timeBucket = getTimeBucket(hour);
+  const timeKr = { morning: "아침", afternoon: "오후", evening: "저녁", night: "밤" }[timeBucket];
+
+  if (!Array.isArray(tracks) || tracks.length === 0) {
+    return res.json({ tracks: [] });
+  }
+
+  const trackList = tracks.slice(0, 6).map((t, i) =>
+    `${i + 1}. "${t.title}" - ${t.artist} (장소: ${t.place || "캠퍼스"}, 태그: ${(t.tags || []).join(", ")})`
+  ).join("\n");
+
+  const prompt = `당신은 위치 기반 인디뮤직 추천 큐레이터입니다.
+사용자 취향: 장르 ${user.prefs.genres.join(", ")}, 분위기 ${user.prefs.moods.join(", ")}
+지금 시간대: ${timeKr}
+${lat && lng ? `현재 위치: 경희대 캠퍼스 근처` : ""}
+
+다음 트랙들 각각에 대해 "왜 지금 이 사용자에게 어울리는지" 한 줄(25자 이내)로 감성적으로 설명해줘.
+${trackList}
+
+응답 형식 (JSON만, 다른 말 금지):
+[{"i":1,"reason":"..."},{"i":2,"reason":"..."}, ...]`;
+
+  const text = await callGemini(prompt, { maxTokens: 600 });
+  let reasons = [];
+  try {
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    reasons = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+  } catch {}
+
+  const enriched = tracks.map((t, idx) => {
+    const found = reasons.find(r => r.i === idx + 1);
+    return found?.reason ? { ...t, reason: found.reason } : t;
+  });
+
+  res.json({ tracks: enriched });
+});
+
+// 특정 장소에 도착했을 때 Gemini가 그 장소 분위기에 맞는 추천 생성
+app.post("/api/place-vibe", async (req, res) => {
+  const { userId, place, tracks } = req.body;
+  const user = getUser(userId || "guest");
+  const hour = new Date().getHours();
+  const timeKr = { morning: "아침", afternoon: "오후", evening: "저녁", night: "밤" }[getTimeBucket(hour)];
+
+  const trackList = (tracks || []).slice(0, 8).map((t, i) =>
+    `${i + 1}. "${t.title}" - ${t.artist} [${(t.tags || []).join(", ")}]`
+  ).join("\n");
+
+  const prompt = `당신은 장소 큐레이터입니다.
+사용자가 방금 "${place}"에 도착했습니다.
+시간대: ${timeKr}
+사용자 취향: ${user.prefs.genres.join(", ")} / ${user.prefs.moods.join(", ")}
+
+후보 트랙:
+${trackList}
+
+위 후보 중 이 장소·시간·취향에 가장 어울리는 트랙 1개를 골라 i 번호와 한 문장(40자 이내) 추천 이유를 JSON으로 반환.
+형식: {"i":번호,"vibe":"한 줄 메시지","reason":"선택 이유"}
+다른 말 금지.`;
+
+  const text = await callGemini(prompt, { maxTokens: 300 });
+  let pick = null;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    pick = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+  } catch {}
+
+  const idx = pick?.i ? pick.i - 1 : 0;
+  const track = (tracks || [])[idx] || (tracks || [])[0];
+  res.json({
+    place,
+    track,
+    vibe: pick?.vibe || `${place}에 어울리는 인디 한 곡`,
+    reason: pick?.reason || ""
+  });
 });
 
 // 잠금 해제 기록 + 포인트 지급
