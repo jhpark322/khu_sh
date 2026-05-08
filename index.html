@@ -62,77 +62,37 @@
         <!-- ══ HOME ══════════════════════════════════════════════════ -->
         <section id="home" class="view active">
 
-          <!-- Hero: blurred cover background + now-playing card -->
           <div class="hero-section">
-            <div class="hero-bg-blur">
-              <img id="heroCover" alt="" src="" aria-hidden="true">
-            </div>
-            <div class="hero-gradient"></div>
-
-            <div class="hero-content">
-              <div class="hero-eyebrow">
-                <span class="app-wordmark">Where Indi</span>
-                <div class="wallet-pill">
-                  <span>IndiCoin</span>
-                  <strong id="keyBalance">25 IC</strong>
+            <div class="home-topbar">
+              <div class="brand-lockup">
+                <div class="brand-logo">WI</div>
+                <div>
+                  <span class="app-wordmark">WHERE INDI</span>
+                  <h1>내 주변 인디 믹스</h1>
                 </div>
               </div>
-
-              <button class="play-cta-btn home-popup-open" id="openHomePopup" aria-label="현재 추천 팝업 열기">Now Playing</button>
-            </div>
-          </div>
-
-          <div class="home-popup" id="homeTrackPopup" aria-hidden="true">
-            <div class="home-popup-card">
-              <button class="popup-close" id="homePopupClose" aria-label="팝업 닫기">×</button>
-              <div class="hero-card">
-                <div class="hero-card-cover-wrap">
-                  <img class="hero-card-cover" id="heroCardCover" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80" alt="현재 트랙 커버">
-                  <div class="now-playing-badge">▶ 재생 중</div>
-                </div>
-                <div class="hero-card-info">
-                  <p class="hero-tag-line">Playing near you</p>
-                  <strong class="hero-track-title" id="heroTrackTitle">밤 산책</strong>
-                  <span class="hero-track-artist" id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</span>
-                  <p class="hero-ai-reason" id="heroReason">자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다.</p>
-                  <button class="play-cta-btn" data-view-jump="track" aria-label="재생 화면 열기">▶ 지금 재생</button>
-                </div>
+              <div class="wallet-pill">
+                <span>IndiCoin</span>
+                <strong id="keyBalance">25 IC</strong>
               </div>
             </div>
-          </div>
 
-          <!-- Stats strip -->
-          <div class="stats-strip">
-            <div class="stat-item">
-              <strong>87</strong>
-              <span>매치 점수</span>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-              <strong>30m</strong>
-              <span>가장 근처</span>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-              <strong>3곡</strong>
-              <span>발견됨</span>
-            </div>
-          </div>
+            <article class="home-hero-card">
+              <div class="home-hero-copy">
+                <p class="hero-tag-line">PLAYING NEAR YOU</p>
+                <h2>지금 근처에서 들을 수 있는 인디 음악</h2>
+                <p>장소, 시간, 취향을 섞어 오늘 걸음에 맞는 플레이리스트를 만듭니다.</p>
+              </div>
 
-          <!-- Quick nav tiles -->
-          <div class="quick-tiles">
-            <button class="quick-tile" data-view-jump="map">
-              <span class="tile-icon">📍</span>
-              <span class="tile-label">가까운 음악</span>
-            </button>
-            <button class="quick-tile" data-view-jump="wallet">
-              <span class="tile-icon">⭐</span>
-              <span class="tile-label">인디코인</span>
-            </button>
-            <button class="quick-tile" data-view-jump="creator">
-              <span class="tile-icon">📊</span>
-              <span class="tile-label">아티스트 통계</span>
-            </button>
+              <div class="home-now-card">
+                <div class="home-now-copy">
+                  <strong id="heroTrackTitle">밤 산책</strong>
+                  <span id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</span>
+                  <small id="heroReason">자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다.</small>
+                </div>
+                <button class="home-now-play" data-view-jump="track" aria-label="재생 화면 열기">▶</button>
+              </div>
+            </article>
           </div>
 
         </section>
@@ -166,6 +126,7 @@
           <!-- Full-screen map area -->
           <div class="map-full" aria-label="근처 음악 지도">
             <div id="kakaoMap" class="kakao-map" aria-label="카카오 지도"></div>
+            <div class="played-song-layer" id="playedSongLayer" aria-label="재생 시작 위치"></div>
 
             <svg class="map-fallback" viewBox="0 0 720 460" role="img" aria-label="경희대 주변 인디 음악 지도">
               <rect class="map-bg" x="0" y="0" width="720" height="460"></rect>

@@ -49,8 +49,8 @@ const state = {
   listenedTrackIds: new Set(),
   pendingListenRewards: new Set(),
   playHistory: [],
+  playedLocations: [],
   simulatedTimer: null,
-  homePopupDismissed: false,
   activeTrack: 0,
   activeTag: "indie",
   tracks: demoTracks,
@@ -109,7 +109,7 @@ const apiStatus = document.querySelector("#apiStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const kakaoMapContainer = document.querySelector("#kakaoMap");
 const mapCanvas = document.querySelector(".map-full");
-const homeTrackPopup = document.querySelector("#homeTrackPopup");
+const playedSongLayer = document.querySelector("#playedSongLayer");
 
 function setView(id) {
   views.forEach((view) => view.classList.toggle("active", view.id === id));
@@ -120,12 +120,6 @@ function setView(id) {
     startGeolocation();
     if (state.kakaoMapReady) requestAnimationFrame(renderKakaoMap);
     renderPlayHistory();
-  }
-  if (id === "home" && !state.homePopupDismissed) {
-    window.setTimeout(openHomePopup, 250);
-  } else if (id !== "home" && homeTrackPopup) {
-    homeTrackPopup.classList.remove("active");
-    homeTrackPopup.setAttribute("aria-hidden", "true");
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -156,28 +150,6 @@ function currentTrack() {
   return state.tracks[state.activeTrack] || state.tracks[0];
 }
 
-function openHomePopup() {
-  if (!homeTrackPopup || !document.querySelector("#home")?.classList.contains("active")) return;
-  homeTrackPopup.classList.add("active");
-  homeTrackPopup.setAttribute("aria-hidden", "false");
-}
-
-function closeHomePopup() {
-  if (!homeTrackPopup) return;
-  state.homePopupDismissed = true;
-  homeTrackPopup.classList.remove("active");
-  homeTrackPopup.setAttribute("aria-hidden", "true");
-}
-
-document.querySelector("#openHomePopup")?.addEventListener("click", () => {
-  state.homePopupDismissed = false;
-  openHomePopup();
-});
-document.querySelector("#homePopupClose")?.addEventListener("click", closeHomePopup);
-homeTrackPopup?.addEventListener("click", (event) => {
-  if (event.target === homeTrackPopup) closeHomePopup();
-});
-
 // 경희대 국제캠퍼스 (용인 기흥) 좌표
 const placeCoords = [
   { lat: 37.2412, lng: 127.0795 }, // 정문 앞
@@ -205,6 +177,14 @@ function setImage(element, src) {
     return;
   }
   element.src = src;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 function selectTrack(index, targetView = "map") {
@@ -283,8 +263,6 @@ function renderSelectedTrack() {
   const distanceBar = document.querySelector("#distanceBar");
   if (distanceBar) distanceBar.style.width = `${Math.max(14, 100 - track.distance)}%`;
 
-  setImage(document.querySelector("#heroCover"), track.image);
-  setImage(document.querySelector("#heroCardCover"), track.image);
   setImage(document.querySelector("#dropCover"), track.image);
   setImage(document.querySelector("#playerCover"), track.image);
   setImage(document.querySelector("#miniCover"), track.image);
@@ -425,6 +403,7 @@ function renderKakaoMap() {
   clearKakaoMarkers();
   state.kakaoMap.setLevel(4);
   state.kakaoMap.setCenter(activeCenter);
+  renderPlayedSongMarkers();
 
   requestAnimationFrame(() => {
     state.kakaoMap.relayout();
@@ -457,6 +436,7 @@ function addPlayHistory(track) {
     { id, title: track.title, artist: track.artist, image: track.image },
     ...state.playHistory.filter(item => item.id !== id)
   ].slice(0, 8);
+  recordPlayedLocation(track);
   renderPlayHistory();
 }
 
@@ -482,6 +462,98 @@ function renderPlayHistory() {
     `;
     list.appendChild(row);
   });
+}
+
+function playLocationFor(track) {
+  const fallback = coordsForTrack(track);
+  return {
+    lat: state.userLocation?.lat ?? fallback.lat,
+    lng: state.userLocation?.lng ?? fallback.lng
+  };
+}
+
+function recordPlayedLocation(track) {
+  const id = trackKey(track);
+  const coords = playLocationFor(track);
+  const existing = state.playedLocations.find(item => item.id === id);
+  const marker = {
+    id,
+    title: track.title,
+    artist: track.artist,
+    image: track.image,
+    lat: coords.lat,
+    lng: coords.lng
+  };
+
+  if (existing) Object.assign(existing, marker);
+  else state.playedLocations.unshift(marker);
+
+  state.playedLocations = state.playedLocations.slice(0, 8);
+  renderPlayedSongMarkers();
+}
+
+function positionPlayedMarker(marker) {
+  const bounds = {
+    minLat: 37.2404,
+    maxLat: 37.2445,
+    minLng: 127.0786,
+    maxLng: 127.0830
+  };
+  const x = ((marker.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 100;
+  const y = (1 - ((marker.lat - bounds.minLat) / (bounds.maxLat - bounds.minLat))) * 100;
+  return {
+    left: `${Math.min(88, Math.max(10, x))}%`,
+    top: `${Math.min(86, Math.max(12, y))}%`
+  };
+}
+
+function renderPlayedSongLayer() {
+  if (!playedSongLayer) return;
+  playedSongLayer.innerHTML = "";
+
+  state.playedLocations.forEach((marker) => {
+    const button = document.createElement("button");
+    button.className = "played-song-marker";
+    button.setAttribute("aria-label", `${marker.title} 재생 시작 위치`);
+    const pos = positionPlayedMarker(marker);
+    button.style.left = pos.left;
+    button.style.top = pos.top;
+    button.innerHTML = `
+      <span>♪</span>
+      <strong>${marker.title}</strong>
+    `;
+    button.addEventListener("click", () => {
+      const index = state.tracks.findIndex(track => trackKey(track) === marker.id);
+      if (index >= 0) selectTrack(index, "track");
+    });
+    playedSongLayer.appendChild(button);
+  });
+}
+
+function renderPlayedSongMarkers() {
+  clearKakaoMarkers();
+
+  if (state.kakaoMapReady && window.kakao?.maps && state.kakaoMap) {
+    const kakao = window.kakao;
+    state.playedLocations.forEach((marker) => {
+      const position = new kakao.maps.LatLng(marker.lat, marker.lng);
+      const content = `
+        <div class="kakao-played-marker">
+          <span>♪</span>
+          <strong>${escapeHtml(marker.title)}</strong>
+        </div>
+      `;
+      const mapMarker = new kakao.maps.CustomOverlay({
+        map: state.kakaoMap,
+        position,
+        content,
+        yAnchor: 1.1
+      });
+      state.kakaoMarkers.push(mapMarker);
+    });
+  }
+
+  renderPlayedSongLayer();
 }
 
 function stopSimulatedPlayback() {
@@ -802,7 +874,6 @@ function initOnboarding() {
     overlay.classList.remove("active");
     await applyRecommendScores();
     applyAiReasons();
-    window.setTimeout(openHomePopup, 350);
   });
 }
 
@@ -856,26 +927,33 @@ async function triggerPlaceVibe(placeName) {
 }
 
 function showPlaceVibeBanner(place, vibe, reason, track) {
-  const old = document.querySelector(".place-vibe-banner");
+  const old = document.querySelector(".nearby-recommend-popup");
   if (old) old.remove();
   const banner = document.createElement("div");
-  banner.className = "place-vibe-banner";
+  banner.className = "nearby-recommend-popup";
   banner.innerHTML = `
-    <div class="pvb-pin">📍</div>
-    <div class="pvb-body">
-      <div class="pvb-place">${place}</div>
-      <div class="pvb-vibe">${vibe}</div>
-      <div class="pvb-track">▶ ${track.title} · ${track.artist}</div>
+    <div class="nrp-card">
+      <button class="nrp-close" aria-label="닫기">×</button>
+      <span class="nrp-kicker">근처 도착</span>
+      <strong>${track.title}</strong>
+      <p>${place} · ${vibe || reason || "지금 위치에 어울리는 인디 음악"}</p>
+      <button class="nrp-play">▶ 지금 듣기</button>
     </div>
-    <button class="pvb-close" aria-label="닫기">×</button>
   `;
   document.body.appendChild(banner);
   requestAnimationFrame(() => banner.classList.add("show"));
-  banner.querySelector(".pvb-close").addEventListener("click", () => banner.remove());
-  banner.querySelector(".pvb-body").addEventListener("click", () => {
+  banner.querySelector(".nrp-close").addEventListener("click", () => banner.remove());
+  banner.querySelector(".nrp-play").addEventListener("click", () => {
     const idx = state.tracks.findIndex(t => t.title === track.title);
-    if (idx >= 0) { state.activeTrack = idx; playTrack(idx); }
+    if (idx >= 0) {
+      state.activeTrack = idx;
+      state.unlocked = true;
+      syncListenStateForActiveTrack();
+      renderAll();
+      setView("track");
+      playCurrentTrack();
+    }
     banner.remove();
   });
-  setTimeout(() => banner.remove(), 8000);
+  setTimeout(() => banner.remove(), 10000);
 }
