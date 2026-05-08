@@ -1487,7 +1487,7 @@ img {
   transform: translateX(-50%);
   z-index: 21;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   width: min(100%, 430px);
   min-height: 64px;
   padding: 0 4px env(safe-area-inset-bottom, 8px);
