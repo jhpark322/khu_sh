@@ -37,6 +37,12 @@ const demoTracks = [
   }
 ];
 
+const USER_ID = localStorage.getItem("windi_uid") || (() => {
+  const id = "u_" + Math.random().toString(36).slice(2, 9);
+  localStorage.setItem("windi_uid", id);
+  return id;
+})();
+
 const state = {
   keys: 25,
   unlocked: false,
@@ -52,13 +58,42 @@ const state = {
   kakaoUserMarker: null,
   userLocation: null,
   geoWatchId: null,
-  metrics: {
-    discoveries: 120,
-    unlocks: 86,
-    reviews: 28,
-    bookings: 9
-  }
+  metrics: { discoveries: 120, unlocks: 86, reviews: 28, bookings: 9 }
 };
+
+// ── API helpers ───────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(path, opts);
+    return res.json();
+  } catch { return null; }
+}
+
+async function applyRecommendScores() {
+  if (!state.tracks.length) return;
+  const params = new URLSearchParams({ userId: USER_ID, tracks: JSON.stringify(state.tracks) });
+  if (state.userLocation) {
+    params.set("lat", state.userLocation.lat);
+    params.set("lng", state.userLocation.lng);
+  }
+  const data = await api("GET", `/api/recommend?${params}`);
+  if (data?.tracks) {
+    state.tracks = data.tracks;
+    renderTrackGrid();
+    renderSelectedTrack();
+  }
+}
+
+function showPointsToast(amount) {
+  const toast = document.createElement("div");
+  toast.className = "points-toast";
+  toast.textContent = `+${amount}K`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("pop"));
+  setTimeout(() => toast.remove(), 1800);
+}
 
 const views = document.querySelectorAll(".view");
 const navButtons = document.querySelectorAll(".nav-button");
@@ -146,7 +181,7 @@ function renderTrackGrid() {
     info.innerHTML = `
       <strong>${track.title}</strong>
       <span>${track.artist}</span>
-      <span>${track.place} · ${track.distance}m</span>
+      <span class="track-reason">${track.reason || track.place + " · " + track.distance + "m"}</span>
     `;
 
     const playBtn = document.createElement("button");
@@ -468,6 +503,7 @@ async function loadJamendoTracks() {
     listenProgress.style.width = "0";
     if (apiStatus) apiStatus.textContent = `${state.tracks.length}개 트랙 불러옴`;
     renderAll();
+    applyRecommendScores();
   } catch (error) {
     state.tracks = demoTracks;
     if (apiStatus) apiStatus.textContent = `${error.message} · 데모 트랙으로 대체`;
@@ -495,16 +531,20 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
 });
 
 
-document.querySelector("#unlockButton").addEventListener("click", () => {
+document.querySelector("#unlockButton").addEventListener("click", async () => {
   if (!state.unlocked) {
     state.unlocked = true;
-    state.keys += 5;
-    state.metrics.unlocks += 1;
-    state.metrics.discoveries += 1;
+    const track = currentTrack();
+    const data = await api("POST", "/api/unlock", { userId: USER_ID, trackId: track.title });
+    if (data) {
+      state.keys = data.keys;
+      state.metrics = data.metrics;
+      showPointsToast(5);
+    } else {
+      state.keys += 5;
+    }
   }
-
-  passText.textContent = "근처에서 재생 중 · 24시간 다시 듣기 가능 · 발견 포인트 +5K";
-  document.querySelector("#unlockStatus").textContent = "재생 시작: 오늘의 근처 트랙에 추가됐습니다.";
+  passText.textContent = "근처에서 재생 중 · 24시간 다시 듣기 가능";
   updateKeys();
   updateMetrics();
   setView("track");
@@ -516,72 +556,66 @@ document.querySelector("#listenButton").addEventListener("click", () => {
     setView("map");
     return;
   }
-
   listenProgress.style.width = "72%";
   if (!state.listened) {
     state.listened = true;
     state.keys += 10;
+    showPointsToast(10);
   }
-
   passText.textContent = "72% 재생됨 · 취향 포인트 +10K";
-  reviewResult.textContent = "피드백을 남기면 취향 포인트가 더 쌓입니다.";
+  reviewResult.textContent = "리뷰를 남기면 포인트가 더 쌓입니다.";
   updateKeys();
 });
 
 document.querySelectorAll(".segment").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".segment").forEach((segment) => segment.classList.remove("active"));
+    document.querySelectorAll(".segment").forEach((s) => s.classList.remove("active"));
     button.classList.add("active");
   });
 });
 
-document.querySelector("#submitReview").addEventListener("click", () => {
+document.querySelector("#submitReview").addEventListener("click", async () => {
   if (!state.listened) {
-    reviewResult.textContent = "70% 이상 들으면 피드백을 남길 수 있어요.";
+    reviewResult.textContent = "70% 이상 들으면 리뷰를 남길 수 있어요.";
     return;
   }
-
   const text = document.querySelector("#reviewText").value.trim();
-  let score = 0;
-  if (text.length >= 80) score += 20;
-  if (/분위기|잔잔|밤|감성|보컬|사운드/.test(text)) score += 20;
-  if (/장소|카페|공간|거리|서점|공원/.test(text)) score += 20;
-  if (/추천|사람|친구|어울/.test(text)) score += 20;
-  if (/아쉬|다만|좋았|기억|후반/.test(text)) score += 20;
+  const feedback = document.querySelector(".segment.active")?.dataset.feedback || "recommend";
+  const track = currentTrack();
 
-  const reward = score >= 80 ? 30 : score >= 60 ? 20 : 10;
-  if (!state.reviewed) {
+  const data = await api("POST", "/api/review", {
+    userId: USER_ID, trackId: track.title, text, feedbackType: feedback
+  });
+
+  if (data && !state.reviewed) {
     state.reviewed = true;
-    state.keys += reward + 5;
-    state.metrics.reviews += 1;
+    state.keys = data.keys;
+    state.metrics = data.metrics;
+    showPointsToast(data.reward);
+    reviewResult.textContent = `리뷰 품질 ${data.quality}점 · +${data.reward}K 적립`;
+  } else if (!state.reviewed) {
+    state.reviewed = true;
+    state.keys += 15;
+    reviewResult.textContent = "리뷰가 제출되었습니다.";
   }
-
-  reviewResult.textContent = `피드백 매치 ${score}점 · 취향 포인트 ${reward + 5}K 추가`;
   updateKeys();
   updateMetrics();
 });
 
-document.querySelector("#spendHint").addEventListener("click", () => {
-  if (state.keys < 10) {
-    walletMessage.textContent = "Indi Points가 부족합니다.";
-    return;
-  }
-
-  state.keys -= 10;
+document.querySelector("#spendHint").addEventListener("click", async () => {
+  if (state.keys < 10) { walletMessage.textContent = "포인트가 부족합니다."; return; }
+  const data = await api("POST", "/api/spend", { userId: USER_ID, amount: 10, purpose: "hint" });
+  if (data?.ok) { state.keys = data.keys; }
+  else state.keys -= 10;
   walletMessage.textContent = "다음 곡은 정문을 지나 두 번째 불빛 근처에 있습니다.";
   updateKeys();
 });
 
-document.querySelector("#applyDiscount").addEventListener("click", () => {
-  if (state.discountApplied) {
-    walletMessage.textContent = "이미 할인 시뮬레이션이 적용되었습니다.";
-    return;
-  }
-
-  if (state.keys < 100) {
-    walletMessage.textContent = "데모 할인에는 100K가 필요합니다. 감상과 리뷰를 더 진행해보세요.";
-    return;
-  }
+document.querySelector("#applyDiscount").addEventListener("click", async () => {
+  if (state.discountApplied) { walletMessage.textContent = "이미 할인이 적용되었습니다."; return; }
+  if (state.keys < 100) { walletMessage.textContent = "100K가 필요합니다. 더 감상하고 리뷰를 남겨보세요."; return; }
+  const data = await api("POST", "/api/spend", { userId: USER_ID, amount: 100, purpose: "booking" });
+  if (data?.ok) { state.keys = data.keys; state.metrics = data.metrics; }
 
   state.keys -= 100;
   state.discountApplied = true;
@@ -608,4 +642,31 @@ window.addEventListener("load", () => {
   }, 2400);
   initializeKakaoMap();
   loadJamendoTracks();
+  initOnboarding();
 });
+
+// ── 온보딩 ────────────────────────────────────────────────────────
+function initOnboarding() {
+  const overlay = document.querySelector("#onboardingOverlay");
+  if (!overlay) return;
+  const seen = localStorage.getItem("windi_onboarded");
+  if (seen) return;
+
+  overlay.classList.add("active");
+
+  document.querySelectorAll("#genreTags .otag").forEach(btn => {
+    btn.addEventListener("click", () => btn.classList.toggle("active"));
+  });
+  document.querySelectorAll("#moodTags .otag").forEach(btn => {
+    btn.addEventListener("click", () => btn.classList.toggle("active"));
+  });
+
+  document.querySelector("#onboardingDone").addEventListener("click", async () => {
+    const genres = [...document.querySelectorAll("#genreTags .otag.active")].map(b => b.dataset.value);
+    const moods = [...document.querySelectorAll("#moodTags .otag.active")].map(b => b.dataset.value);
+    await api("POST", "/api/user/prefs", { userId: USER_ID, genres, moods });
+    localStorage.setItem("windi_onboarded", "1");
+    overlay.classList.remove("active");
+    applyRecommendScores();
+  });
+}

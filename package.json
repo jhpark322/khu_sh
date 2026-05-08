@@ -1,0 +1,20 @@
+{
+  "name": "khu_sh",
+  "version": "1.0.0",
+  "description": "경희대 파일럿을 상정한 위치 기반 인디뮤직 발견 앱 데모입니다.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:38773/git/jhpark322/khu_sh"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
