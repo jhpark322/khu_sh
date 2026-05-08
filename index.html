@@ -73,8 +73,8 @@
               <div class="hero-eyebrow">
                 <span class="app-wordmark">Where Indi</span>
                 <div class="wallet-pill">
-                  <span>Points</span>
-                  <strong id="keyBalance">25K</strong>
+                  <span>IndiCoin</span>
+                  <strong id="keyBalance">25 IC</strong>
                 </div>
               </div>
 
@@ -87,7 +87,7 @@
                   <p class="hero-tag-line">Playing near you</p>
                   <strong class="hero-track-title" id="heroTrackTitle">밤 산책</strong>
                   <span class="hero-track-artist" id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</span>
-                  <p class="hero-ai-reason">자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다.</p>
+                  <p class="hero-ai-reason" id="heroReason">자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다.</p>
                   <button class="play-cta-btn" data-view-jump="track" aria-label="재생 화면 열기">▶ 지금 재생</button>
                 </div>
               </div>
@@ -154,7 +154,7 @@
             </button>
             <button class="quick-tile" data-view-jump="wallet">
               <span class="tile-icon">⭐</span>
-              <span class="tile-label">내 보관함</span>
+              <span class="tile-label">인디코인</span>
             </button>
             <button class="quick-tile" data-view-jump="creator">
               <span class="tile-icon">📊</span>
@@ -280,47 +280,65 @@
             </div>
             <textarea id="reviewText">밤에 카페 앞에서 듣기 좋은 잔잔한 곡이었습니다. 보컬이 담담해서 과하지 않았고, 이 장소의 분위기와 잘 맞았습니다. 친구에게도 추천하고 싶지만 후반부 전개는 조금 단조롭게 느껴졌습니다.</textarea>
             <button class="ghost-button" id="submitReview">리뷰 제출</button>
-            <p class="status-text" id="reviewResult">70% 이상 들으면 취향 포인트가 쌓입니다.</p>
+            <p class="status-text" id="reviewResult">추천 음악을 70% 이상 들으면 인디코인이 지급됩니다.</p>
           </article>
 
         </section>
 
-        <!-- ══ WALLET / LIBRARY ══════════════════════════════════════ -->
+        <!-- ══ INDICOIN ══════════════════════════════════════════════ -->
         <section id="wallet" class="view">
 
           <div class="view-header">
-            <p class="view-eyebrow">Your Library</p>
-            <h2 class="view-title">저장한 음악</h2>
+            <p class="view-eyebrow">IndiCoin</p>
+            <h2 class="view-title">인디코인</h2>
           </div>
 
-          <!-- Points card -->
+          <!-- Coin card -->
           <div class="points-card">
             <div class="points-card-top">
-              <span class="points-label">Indi Points</span>
+              <span class="points-label">Coin Balance</span>
               <strong class="points-value" id="keyBalance2"></strong>
             </div>
-            <p class="points-sub">오늘 취향 포인트를 모아 공연 혜택으로 연결</p>
+            <p class="points-sub">추천 음악 70% 감상, 리뷰, 장소 발견으로 모아 쓰는 인디코인</p>
+            <div class="coin-level-row">
+              <span id="coinLevel">Level 1</span>
+              <span id="coinProgress">다음 레벨까지 25 IC</span>
+            </div>
             <button class="text-link" data-view-jump="creator">아티스트 통계 →</button>
           </div>
 
           <!-- Reward actions -->
           <section class="reward-panel">
-            <h3>내 음악 혜택</h3>
+            <h3>코인 샵</h3>
             <button class="reward-item" id="spendHint">
               <div class="reward-item-left">
                 <span class="reward-icon">🔍</span>
                 <span>다음 추천 보기</span>
               </div>
-              <strong class="reward-cost">10K</strong>
+              <strong class="reward-cost">10 IC</strong>
+            </button>
+            <button class="reward-item" id="levelUpButton">
+              <div class="reward-item-left">
+                <span class="reward-icon">⬆</span>
+                <span>인디패스 레벨업</span>
+              </div>
+              <strong class="reward-cost">25 IC</strong>
             </button>
             <button class="reward-item" id="applyDiscount">
               <div class="reward-item-left">
                 <span class="reward-icon">🎟</span>
                 <span>공연 할인 적용</span>
               </div>
-              <strong class="reward-cost">100K</strong>
+              <strong class="reward-cost">100 IC</strong>
             </button>
-            <p class="status-text" id="walletMessage">추천을 열거나 예약 할인 시뮬레이션을 확인하세요.</p>
+            <button class="reward-item" id="cashOutButton">
+              <div class="reward-item-left">
+                <span class="reward-icon">₩</span>
+                <span>현금화 신청</span>
+              </div>
+              <strong class="reward-cost">200 IC</strong>
+            </button>
+            <p class="status-text" id="walletMessage">인디코인은 음악 감상 리워드와 공연 혜택으로 사용할 수 있어요.</p>
           </section>
 
           <!-- Concert ticket -->
@@ -409,7 +427,7 @@
         </button>
         <button class="nav-button" data-view="wallet">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><circle cx="12" cy="14" r="2" fill="currentColor" stroke="none"/></svg>
-          <span>보관함</span>
+          <span>인디코인</span>
         </button>
       </nav>
 

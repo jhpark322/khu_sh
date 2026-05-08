@@ -46,6 +46,10 @@ const state = {
   listened: false,
   reviewed: false,
   discountApplied: false,
+  memberLevel: 1,
+  cashoutRequested: false,
+  listenedTrackIds: new Set(),
+  pendingListenRewards: new Set(),
   activeTrack: 0,
   activeTag: "indie",
   tracks: demoTracks,
@@ -86,7 +90,7 @@ async function applyRecommendScores() {
 function showPointsToast(amount) {
   const toast = document.createElement("div");
   toast.className = "points-toast";
-  toast.textContent = `+${amount}K`;
+  toast.textContent = `+${amount} IC`;
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add("pop"));
   setTimeout(() => toast.remove(), 1800);
@@ -95,6 +99,9 @@ function showPointsToast(amount) {
 const views = document.querySelectorAll(".view");
 const navButtons = document.querySelectorAll(".nav-button");
 const keyBalance = document.querySelector("#keyBalance");
+const keyBalance2 = document.querySelector("#keyBalance2");
+const coinLevel = document.querySelector("#coinLevel");
+const coinProgress = document.querySelector("#coinProgress");
 const passText = document.querySelector("#passText");
 const listenProgress = document.querySelector("#listenProgress");
 const reviewResult = document.querySelector("#reviewResult");
@@ -116,8 +123,27 @@ function setView(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function trackKey(track) {
+  return `${track?.title || "track"}::${track?.artist || "artist"}`;
+}
+
+function syncListenStateForActiveTrack() {
+  state.listened = state.listenedTrackIds.has(trackKey(currentTrack()));
+  if (listenProgress) listenProgress.style.width = state.listened ? "72%" : "0";
+}
+
 function updateKeys() {
-  keyBalance.textContent = `${state.keys}K`;
+  const label = `${state.keys} IC`;
+  if (keyBalance) keyBalance.textContent = label;
+  if (keyBalance2) keyBalance2.textContent = label;
+  if (coinLevel) coinLevel.textContent = `Level ${state.memberLevel}`;
+  if (coinProgress) {
+    const nextCost = state.memberLevel * 25;
+    const remaining = Math.max(0, nextCost - state.keys);
+    coinProgress.textContent = remaining ? `다음 레벨까지 ${remaining} IC` : "레벨업 가능";
+  }
+  const levelCost = document.querySelector("#levelUpButton .reward-cost");
+  if (levelCost) levelCost.textContent = `${state.memberLevel * 25} IC`;
 }
 
 function updateMetrics() {
@@ -160,6 +186,15 @@ function setImage(element, src) {
   element.src = src;
 }
 
+function selectTrack(index, targetView = "map") {
+  state.activeTrack = index;
+  state.unlocked = false;
+  state.reviewed = false;
+  syncListenStateForActiveTrack();
+  renderAll();
+  if (targetView) setView(targetView);
+}
+
 function renderTrackGrid() {
   const grid = document.querySelector("#trackGrid");
   grid.innerHTML = "";
@@ -189,6 +224,8 @@ function renderTrackGrid() {
     playBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       state.activeTrack = index;
+      syncListenStateForActiveTrack();
+      renderSelectedTrack();
       playTrack(index);
     });
 
@@ -196,15 +233,7 @@ function renderTrackGrid() {
     card.appendChild(info);
     card.appendChild(playBtn);
 
-    card.addEventListener("click", () => {
-      state.activeTrack = index;
-      state.unlocked = false;
-      state.listened = false;
-      state.reviewed = false;
-      listenProgress.style.width = "0";
-      renderAll();
-      setView("map");
-    });
+    card.addEventListener("click", () => selectTrack(index, "map"));
 
     grid.appendChild(card);
   });
@@ -215,6 +244,7 @@ function renderSelectedTrack() {
   const meta = `${track.artist} · ${track.place} · ${track.distance}m`;
   setText("#heroTrackTitle", track.title);
   setText("#heroTrackArtist", meta);
+  setText("#heroReason", track.reason || "PCA 추천 결과를 바탕으로 지금 듣기 좋은 인디 트랙입니다.");
   setText("#dropTitle", track.title);
   setText("#dropMeta", `${track.artist} · ${track.place}`);
   setText("#playerTitle", track.title);
@@ -258,14 +288,7 @@ function renderMapMarkers() {
   document.querySelectorAll(".drop-marker").forEach((marker) => {
     const index = Number(marker.dataset.dropIndex);
     marker.classList.toggle("selected", index === state.activeTrack);
-    marker.addEventListener("click", () => {
-      state.activeTrack = index;
-      state.unlocked = false;
-      state.listened = false;
-      state.reviewed = false;
-      listenProgress.style.width = "0";
-      renderAll();
-    });
+    marker.addEventListener("click", () => selectTrack(index, null));
   });
 }
 
@@ -409,15 +432,7 @@ function renderKakaoMap() {
       title: `${track.title} - ${track.artist}`
     });
 
-    kakao.maps.event.addListener(marker, "click", () => {
-      state.activeTrack = index;
-      state.unlocked = false;
-      state.listened = false;
-      state.reviewed = false;
-      listenProgress.style.width = "0";
-      renderAll();
-      setView("map");
-    });
+    kakao.maps.event.addListener(marker, "click", () => selectTrack(index, "map"));
 
     state.kakaoMarkers.push(marker);
     bounds.extend(position);
@@ -450,6 +465,41 @@ function renderAll() {
 const trackAudio = new Audio();
 let playingIndex = null;
 
+async function awardListenCoins(track = currentTrack(), percent = 72) {
+  const id = trackKey(track);
+  if (state.listenedTrackIds.has(id) || state.pendingListenRewards.has(id)) return false;
+
+  state.pendingListenRewards.add(id);
+  const data = await api("POST", "/api/listen-reward", {
+    userId: USER_ID,
+    trackId: id,
+    trackTitle: track.title,
+    percent
+  });
+
+  state.pendingListenRewards.delete(id);
+  if (data && !data.ok) {
+    if (data.alreadyRewarded) state.listenedTrackIds.add(id);
+    return false;
+  }
+
+  const reward = data?.reward || 10;
+  if (data?.keys !== undefined) state.keys = data.keys;
+  else state.keys += reward;
+
+  state.listenedTrackIds.add(id);
+  if (trackKey(currentTrack()) === id) {
+    state.listened = true;
+    if (listenProgress) listenProgress.style.width = `${Math.max(70, percent)}%`;
+    passText.textContent = `${Math.round(percent)}% 감상 완료 · 인디코인 +${reward} IC`;
+    reviewResult.textContent = "리뷰를 남기면 인디코인이 더 쌓입니다.";
+  }
+
+  showPointsToast(reward);
+  updateKeys();
+  return true;
+}
+
 function playTrack(index) {
   const track = state.tracks[index];
   if (!track?.audio) return;
@@ -457,6 +507,7 @@ function playTrack(index) {
   if (playingIndex === index) {
     if (trackAudio.paused) {
       trackAudio.play();
+      api("POST", "/api/play", { userId: USER_ID, trackTitle: track.title, artist: track.artist });
     } else {
       trackAudio.pause();
     }
@@ -464,12 +515,21 @@ function playTrack(index) {
     trackAudio.src = track.audio;
     trackAudio.play();
     playingIndex = index;
+    api("POST", "/api/play", { userId: USER_ID, trackTitle: track.title, artist: track.artist });
   }
   renderTrackGrid();
 }
 
 trackAudio.addEventListener("pause", () => renderTrackGrid());
 trackAudio.addEventListener("play", () => renderTrackGrid());
+trackAudio.addEventListener("timeupdate", () => {
+  if (playingIndex === null || !Number.isFinite(trackAudio.duration) || trackAudio.duration <= 0) return;
+  const percent = Math.min(100, Math.round((trackAudio.currentTime / trackAudio.duration) * 100));
+  if (playingIndex === state.activeTrack && listenProgress) {
+    listenProgress.style.width = `${percent}%`;
+  }
+  if (percent >= 70) awardListenCoins(state.tracks[playingIndex], percent);
+});
 
 function normalizeJamendoTrack(track, index) {
   const tags = [
@@ -515,9 +575,11 @@ async function loadJamendoTracks() {
     state.tracks = data.results.map(normalizeJamendoTrack);
     state.activeTrack = 0;
     state.unlocked = false;
+    state.listenedTrackIds.clear();
+    state.pendingListenRewards.clear();
     state.listened = false;
     state.reviewed = false;
-    listenProgress.style.width = "0";
+    syncListenStateForActiveTrack();
     if (apiStatus) apiStatus.textContent = `${state.tracks.length}개 트랙 불러옴`;
     renderAll();
     await applyRecommendScores();
@@ -548,6 +610,32 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
   });
 });
 
+async function spendCoins(amount, purpose) {
+  if (state.keys < amount) {
+    walletMessage.textContent = `${amount} IC가 필요합니다. 추천 음악을 70% 이상 감상해 인디코인을 모아보세요.`;
+    return null;
+  }
+
+  const data = await api("POST", "/api/spend", { userId: USER_ID, amount, purpose });
+  if (data?.ok) {
+    state.keys = data.keys;
+    if (data.level) state.memberLevel = data.level;
+    if (data.cashoutRequested !== undefined) state.cashoutRequested = data.cashoutRequested;
+    if (data.metrics) state.metrics = data.metrics;
+    updateKeys();
+    updateMetrics();
+    return data;
+  }
+
+  if (data && !data.ok) {
+    walletMessage.textContent = data.message || "인디코인이 부족합니다.";
+    return null;
+  }
+
+  state.keys -= amount;
+  updateKeys();
+  return { ok: true, keys: state.keys };
+}
 
 document.querySelector("#unlockButton").addEventListener("click", async () => {
   if (!state.unlocked) {
@@ -557,32 +645,26 @@ document.querySelector("#unlockButton").addEventListener("click", async () => {
     if (data) {
       state.keys = data.keys;
       state.metrics = data.metrics;
-      showPointsToast(5);
-    } else {
-      state.keys += 5;
     }
   }
-  passText.textContent = "근처에서 재생 중 · 24시간 다시 듣기 가능";
+  passText.textContent = "근처에서 재생 중 · 70% 이상 들으면 인디코인 지급";
   updateKeys();
   updateMetrics();
   setView("track");
 });
 
-document.querySelector("#listenButton").addEventListener("click", () => {
+document.querySelector("#listenButton").addEventListener("click", async () => {
   if (!state.unlocked) {
     passText.textContent = "먼저 지도에서 근처 음악을 선택하세요.";
     setView("map");
     return;
   }
   listenProgress.style.width = "72%";
-  if (!state.listened) {
-    state.listened = true;
-    state.keys += 10;
-    showPointsToast(10);
+  const rewarded = await awardListenCoins(currentTrack(), 72);
+  if (!rewarded) {
+    passText.textContent = "72% 감상 완료 · 이미 인디코인을 받았어요.";
+    reviewResult.textContent = "리뷰를 남기면 인디코인이 더 쌓입니다.";
   }
-  passText.textContent = "72% 재생됨 · 취향 포인트 +10K";
-  reviewResult.textContent = "리뷰를 남기면 포인트가 더 쌓입니다.";
-  updateKeys();
 });
 
 document.querySelectorAll(".segment").forEach((button) => {
@@ -602,7 +684,7 @@ document.querySelector("#submitReview").addEventListener("click", async () => {
   const track = currentTrack();
 
   const data = await api("POST", "/api/review", {
-    userId: USER_ID, trackId: track.title, text, feedbackType: feedback
+    userId: USER_ID, trackId: track.title, trackObj: track, text, feedbackType: feedback
   });
 
   if (data && !state.reviewed) {
@@ -610,39 +692,52 @@ document.querySelector("#submitReview").addEventListener("click", async () => {
     state.keys = data.keys;
     state.metrics = data.metrics;
     showPointsToast(data.reward);
-    reviewResult.textContent = `리뷰 품질 ${data.quality}점 · +${data.reward}K 적립`;
+    reviewResult.textContent = `리뷰 품질 ${data.quality}점 · +${data.reward} IC 적립`;
   } else if (!state.reviewed) {
     state.reviewed = true;
     state.keys += 15;
-    reviewResult.textContent = "리뷰가 제출되었습니다.";
+    reviewResult.textContent = "리뷰가 제출되었습니다. +15 IC 적립";
   }
   updateKeys();
   updateMetrics();
 });
 
 document.querySelector("#spendHint").addEventListener("click", async () => {
-  if (state.keys < 10) { walletMessage.textContent = "포인트가 부족합니다."; return; }
-  const data = await api("POST", "/api/spend", { userId: USER_ID, amount: 10, purpose: "hint" });
-  if (data?.ok) { state.keys = data.keys; }
-  else state.keys -= 10;
+  const data = await spendCoins(10, "hint");
+  if (!data) return;
   walletMessage.textContent = "다음 곡은 정문을 지나 두 번째 불빛 근처에 있습니다.";
+});
+
+document.querySelector("#levelUpButton").addEventListener("click", async () => {
+  const cost = state.memberLevel * 25;
+  const data = await spendCoins(cost, "level-up");
+  if (!data) return;
+  if (!data.level) state.memberLevel += 1;
+  walletMessage.textContent = `인디패스 Level ${state.memberLevel} 달성. 추천 우선권이 올라갔어요.`;
   updateKeys();
 });
 
 document.querySelector("#applyDiscount").addEventListener("click", async () => {
   if (state.discountApplied) { walletMessage.textContent = "이미 할인이 적용되었습니다."; return; }
-  if (state.keys < 100) { walletMessage.textContent = "100K가 필요합니다. 더 감상하고 리뷰를 남겨보세요."; return; }
-  const data = await api("POST", "/api/spend", { userId: USER_ID, amount: 100, purpose: "booking" });
-  if (data?.ok) { state.keys = data.keys; state.metrics = data.metrics; }
-
-  state.keys -= 100;
+  const data = await spendCoins(100, "booking");
+  if (!data) return;
   state.discountApplied = true;
-  state.metrics.bookings += 1;
   document.querySelector("#discountValue").textContent = "2,000원";
   document.querySelector("#finalPrice").textContent = "13,000원";
-  walletMessage.textContent = "Indi Points 할인이 적용되었습니다.";
+  walletMessage.textContent = "공연 할인에 인디코인이 적용되었습니다.";
   updateKeys();
   updateMetrics();
+});
+
+document.querySelector("#cashOutButton").addEventListener("click", async () => {
+  if (state.cashoutRequested) {
+    walletMessage.textContent = "이미 현금화 신청이 접수되었습니다.";
+    return;
+  }
+  const data = await spendCoins(200, "cashout");
+  if (!data) return;
+  state.cashoutRequested = true;
+  walletMessage.textContent = "현금화 신청 접수 완료. 데모에서는 정산 대기 상태로 표시됩니다.";
 });
 
 renderMapMarkers();

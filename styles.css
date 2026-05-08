@@ -1211,6 +1211,21 @@ img {
   line-height: 1.4;
 }
 
+.coin-level-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.coin-level-row span:last-child {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 /* Reward panel */
 .reward-panel {
   margin: 16px 16px 0;

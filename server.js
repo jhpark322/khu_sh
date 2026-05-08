@@ -1,10 +1,161 @@
-const express = require("express");
+const fs = require("fs");
+const http = require("http");
 const path = require("path");
+const { URL } = require("url");
 
-const GEMINI_API_KEY = "AIzaSyAxIi7qUITYaEGfXA4YC0UyWOtXPE_0GT4";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon"
+};
+
+function express() {
+  const routes = [];
+  const middlewares = [];
+  let staticRoot = null;
+
+  function decorateResponse(res) {
+    res.set = (name, value) => {
+      res.setHeader(name, value);
+      return res;
+    };
+    res.status = (statusCode) => {
+      res.statusCode = statusCode;
+      return res;
+    };
+    res.json = (payload) => {
+      if (!res.headersSent) res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify(payload));
+    };
+  }
+
+  function parseBody(req) {
+    if (req.method === "GET" || req.method === "HEAD") return Promise.resolve({});
+
+    return new Promise((resolve) => {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk;
+        if (body.length > 1_000_000) req.destroy();
+      });
+      req.on("end", () => {
+        if (!body) return resolve({});
+        try {
+          resolve(JSON.parse(body));
+        } catch {
+          resolve({});
+        }
+      });
+      req.on("error", () => resolve({}));
+    });
+  }
+
+  function serveStatic(req, res) {
+    if (!staticRoot || (req.method !== "GET" && req.method !== "HEAD")) return false;
+
+    const root = path.resolve(staticRoot);
+    const requestPath = req.path === "/" ? "/index.html" : req.path;
+    const filePath = path.resolve(root, `.${decodeURIComponent(requestPath)}`);
+    const normalizedRoot = root.toLowerCase();
+    const normalizedFile = filePath.toLowerCase();
+
+    if (normalizedFile !== normalizedRoot && !normalizedFile.startsWith(`${normalizedRoot}${path.sep}`)) {
+      res.statusCode = 404;
+      res.end("Not found");
+      return true;
+    }
+
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+      res.statusCode = 404;
+      res.end("Not found");
+      return true;
+    }
+
+    res.setHeader("Content-Type", MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream");
+    if (req.method === "HEAD") return res.end(), true;
+    fs.createReadStream(filePath).pipe(res);
+    return true;
+  }
+
+  async function handleRequest(req, res) {
+    try {
+      decorateResponse(res);
+      const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      req.path = parsedUrl.pathname;
+      req.query = Object.fromEntries(parsedUrl.searchParams.entries());
+      req.body = await parseBody(req);
+
+      for (const middleware of middlewares) {
+        await new Promise((resolve, reject) => {
+          try {
+            middleware(req, res, (err) => err ? reject(err) : resolve());
+          } catch (error) {
+            reject(error);
+          }
+        });
+        if (res.writableEnded) return;
+      }
+
+      const route = routes.find((item) => item.method === req.method && item.path === req.path);
+      if (route) {
+        await route.handler(req, res);
+        return;
+      }
+
+      if (serveStatic(req, res)) return;
+      res.statusCode = 404;
+      res.end("Not found");
+    } catch (error) {
+      console.error("Server error:", error);
+      if (!res.headersSent) res.statusCode = 500;
+      res.end("Internal server error");
+    }
+  }
+
+  return {
+    use(middleware) {
+      if (middleware?.staticRoot) {
+        staticRoot = middleware.staticRoot;
+        return;
+      }
+      middlewares.push(middleware);
+    },
+    set() {},
+    get(routePath, handler) {
+      routes.push({ method: "GET", path: routePath, handler });
+    },
+    post(routePath, handler) {
+      routes.push({ method: "POST", path: routePath, handler });
+    },
+    listen(port, host, callback) {
+      return http.createServer(handleRequest).listen(port, host, callback);
+    }
+  };
+}
+
+express.json = () => (_req, _res, next) => next();
+express.static = (root) => {
+  const middleware = (_req, _res, next) => next();
+  middleware.staticRoot = root;
+  return middleware;
+};
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_URL = GEMINI_API_KEY
+  ? `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
+  : "";
 
 async function callGemini(prompt, { maxTokens = 200 } = {}) {
+  if (!GEMINI_API_KEY) return "";
+
   try {
     const res = await fetch(GEMINI_URL, {
       method: "POST",
@@ -45,8 +196,11 @@ function getUser(userId) {
     store.users[userId] = {
       prefs: { genres: ["indie"], moods: ["잔잔함", "밤"] },
       keys: 25,
+      level: 1,
+      cashoutRequested: false,
       unlocked: [],
       reviewed: [],
+      listenRewards: [],
       playHistory: [],    // [trackTitle, ...] 최근 재생 순서
       likedTracks: [],    // 긍정 피드백 트랙
       dislikedTracks: []  // 부정 피드백 트랙
@@ -237,6 +391,17 @@ function projectPCA(vec, pca) {
 function scoreTrackML(track, user, userLocation, timeBucket, pca, userProj, opts = {}) {
   let score = 0;
   const factors = [];
+  const match = {
+    pcaSimilarity: null,
+    pcaScore: 0,
+    distanceScore: 0,
+    timeMatch: false,
+    placeMatch: false,
+    noveltyScore: 0,
+    diversityScore: 0,
+    feedbackScore: 0,
+    factors
+  };
 
   const trackTags = (track.tags || []).map(t => t.toLowerCase());
   const timeTags  = TIME_MOODS[timeBucket] || [];
@@ -248,6 +413,8 @@ function scoreTrackML(track, user, userLocation, timeBucket, pca, userProj, opts
     const sim = cosineSim(userProj, trackProj);
     const pcaScore = Math.max(0, sim) * 35;
     score += pcaScore;
+    match.pcaSimilarity = Number(sim.toFixed(3));
+    match.pcaScore = Math.round(pcaScore);
     if (sim > 0.7) factors.push("취향과 거의 완벽히 일치");
     else if (sim > 0.4) factors.push("취향과 잘 맞음");
   }
@@ -257,17 +424,20 @@ function scoreTrackML(track, user, userLocation, timeBucket, pca, userProj, opts
     const dist = haversine(userLocation.lat, userLocation.lng, track.coords.lat, track.coords.lng);
     const distScore = Math.max(0, 20 - Math.floor(dist / 50));
     score += distScore;
+    match.distanceScore = distScore;
     track._dist = Math.round(dist);
     if (dist < 80)  factors.push(`${Math.round(dist)}m 바로 앞`);
     else if (dist < 400) factors.push(`도보 ${Math.round(dist / 80)}분`);
   } else {
     score += 10;
+    match.distanceScore = 10;
   }
 
   // 3. 시간대 분위기 정합성 (15점)
   const timeHits = trackTags.filter(t => timeTags.some(tt => t.includes(tt) || tt.includes(t)));
   if (timeHits.length > 0) {
     score += 15;
+    match.timeMatch = true;
     const timeKr = { morning:"아침", afternoon:"오후", evening:"저녁", night:"밤" }[timeBucket];
     factors.push(`${timeKr} 감성과 딱`);
   } else {
@@ -277,26 +447,39 @@ function scoreTrackML(track, user, userLocation, timeBucket, pca, userProj, opts
   // 4. 장소 분위기 일치 (10점)
   const placeTags = PLACE_TAGS[track.place] || [];
   const placeHits = placeTags.filter(t => timeTags.some(tt => t.includes(tt) || tt.includes(t)));
-  if (placeHits.length > 0) score += 10;
+  if (placeHits.length > 0) {
+    score += 10;
+    match.placeMatch = true;
+  }
 
   // 5. 신선도 / 노블티 (8점) — 최근 들은 트랙 패널티
   const recentPlays = opts.playHistory || [];
   const playCount = recentPlays.filter(t => t === track.title).length;
-  score += Math.max(0, 8 - playCount * 4);
+  match.noveltyScore = Math.max(0, 8 - playCount * 4);
+  score += match.noveltyScore;
   if (playCount === 0) factors.push("아직 못 들은 트랙");
 
   // 6. 아티스트 다양성 (5점) — 최근 2곡과 같은 아티스트 패널티
   const lastTwo = recentPlays.slice(-2);
-  if (!lastTwo.includes(track.artist)) score += 5;
+  if (!lastTwo.includes(track.artist)) {
+    match.diversityScore = 5;
+    score += 5;
+  }
 
   // 7. 긍정/부정 피드백 반영 (7점)
   const liked    = (opts.likedTracks    || []).map(t => t.title);
   const disliked = (opts.dislikedTracks || []).map(t => t.title);
-  if (liked.includes(track.title))    score += 7;
-  if (disliked.includes(track.title)) score -= 10;
+  if (liked.includes(track.title)) {
+    match.feedbackScore += 7;
+    score += 7;
+  }
+  if (disliked.includes(track.title)) {
+    match.feedbackScore -= 10;
+    score -= 10;
+  }
 
   const reason = factors.slice(0, 2).join(" · ") || "인디 취향에 어울리는 곡";
-  return { score: Math.min(99, Math.max(0, Math.round(score))), reason };
+  return { score: Math.min(99, Math.max(0, Math.round(score))), reason, match };
 }
 
 // ── API Routes ────────────────────────────────────────────────────
@@ -338,8 +521,17 @@ app.get("/api/recommend", (req, res) => {
 
   const scored = tracks
     .map(track => {
-      const { score, reason } = scoreTrackML(track, user, userLocation, timeBucket, pca, userProj, opts);
-      return { ...track, score, reason };
+      const { score, reason, match } = scoreTrackML(track, user, userLocation, timeBucket, pca, userProj, opts);
+      return {
+        ...track,
+        score,
+        reason,
+        match: {
+          ...match,
+          pcaComponents: pca?.components.length || 0,
+          timeBucket
+        }
+      };
     })
     .sort((a, b) => b.score - a.score);
 
@@ -356,7 +548,28 @@ app.post("/api/play", (req, res) => {
   res.json({ ok: true });
 });
 
-// Gemini AI 추천 이유 생성
+// 70% 이상 감상 리워드
+app.post("/api/listen-reward", (req, res) => {
+  const { userId, trackId, trackTitle, percent } = req.body;
+  const user = getUser(userId || "guest");
+  const id = trackId || trackTitle;
+  const listenedPercent = Number(percent || 0);
+
+  if (!id) return res.json({ ok: false, message: "트랙 정보가 없습니다." });
+  if (listenedPercent < 70) {
+    return res.json({ ok: false, message: "70% 이상 들어야 인디코인이 지급됩니다." });
+  }
+  if (user.listenRewards.includes(id)) {
+    return res.json({ ok: false, alreadyRewarded: true, keys: user.keys, reward: 0 });
+  }
+
+  user.listenRewards.push(id);
+  user.keys += 10;
+  store.metrics.unlocks += 1;
+  res.json({ ok: true, reward: 10, keys: user.keys, metrics: store.metrics });
+});
+
+// Gemini: PCA 추천 결과를 사용자 언어로 설명
 app.post("/api/ai-reasons", async (req, res) => {
   const { userId, tracks, lat, lng } = req.body;
   const user = getUser(userId || "guest");
@@ -365,16 +578,20 @@ app.post("/api/ai-reasons", async (req, res) => {
 
   if (!Array.isArray(tracks) || !tracks.length) return res.json({ tracks: [] });
 
-  const trackList = tracks.slice(0, 6).map((t, i) =>
-    `${i+1}. "${t.title}" - ${t.artist} (장소: ${t.place||"캠퍼스"}, 태그: ${(t.tags||[]).join(", ")}, 점수: ${t.score||"?"})`
-  ).join("\n");
+  const trackList = tracks.slice(0, 6).map((t, i) => {
+    const match = t.match || {};
+    const factors = Array.isArray(match.factors) ? match.factors.join(" / ") : (t.reason || "");
+    return `${i+1}. "${t.title}" - ${t.artist}
+   점수 ${t.score || "?"}, PCA유사도 ${match.pcaSimilarity ?? "n/a"}, PCA점수 ${match.pcaScore ?? "n/a"}, GPS점수 ${match.distanceScore ?? "n/a"}, 시간매치 ${match.timeMatch ? "yes" : "no"}, 장소매치 ${match.placeMatch ? "yes" : "no"}, 요인 ${factors}, 태그 ${(t.tags||[]).join(", ")}`;
+  }).join("\n");
 
-  const prompt = `당신은 경희대 국제캠퍼스 인디뮤직 큐레이터입니다.
+  const prompt = `당신은 경희대 국제캠퍼스 인디뮤직 앱의 추천 설명 LLM입니다.
+추천 자체는 이미 PCA 기반 추천 엔진이 계산했습니다. 당신은 새 추천을 만들지 말고, 아래 PCA/룰 점수 결과를 사람이 듣고 싶어지게 설명만 합니다.
 사용자 취향 — 장르: ${user.prefs.genres.join(", ")}, 분위기: ${user.prefs.moods.join(", ")}
 현재 시간대: ${timeKr}
 ${lat && lng ? "현재 위치: 경희대 국제캠퍼스" : ""}
 
-아래 트랙들 각각에 대해 지금 이 사람에게 왜 어울리는지 감성적으로 한 줄(20자 이내)로 써줘.
+각 트랙에 대해 PCA 취향 유사도, 위치, 시간대, 장소 분위기 중 핵심 1~2개를 녹여서 한 줄(35자 이내)로 설명해줘.
 ${trackList}
 
 JSON만 반환 (다른 말 금지):
@@ -425,7 +642,6 @@ app.post("/api/unlock", (req, res) => {
   const user = getUser(userId || "guest");
   if (!user.unlocked.includes(trackId)) {
     user.unlocked.push(trackId);
-    user.keys += 5;
     store.metrics.unlocks += 1;
     store.metrics.discoveries += 1;
   }
@@ -468,14 +684,26 @@ app.post("/api/review", (req, res) => {
   res.json({ ok: true, quality, reward, keys: user.keys, metrics: store.metrics });
 });
 
-// 포인트 사용
+// 인디코인 사용
 app.post("/api/spend", (req, res) => {
   const { userId, amount, purpose } = req.body;
   const user = getUser(userId || "guest");
-  if (user.keys < amount) return res.json({ ok: false, message: "포인트 부족" });
+  if (user.keys < amount) return res.json({ ok: false, message: "인디코인이 부족합니다." });
   user.keys -= amount;
-  if (purpose === "booking") store.metrics.bookings += 1;
-  res.json({ ok: true, keys: user.keys, metrics: store.metrics });
+  if (purpose === "booking") {
+    store.metrics.bookings += 1;
+  } else if (purpose === "level-up") {
+    user.level += 1;
+  } else if (purpose === "cashout") {
+    user.cashoutRequested = true;
+  }
+  res.json({
+    ok: true,
+    keys: user.keys,
+    level: user.level,
+    cashoutRequested: user.cashoutRequested,
+    metrics: store.metrics
+  });
 });
 
 // 크리에이터 대시보드
