@@ -668,9 +668,10 @@ renderAll();
 
 document.querySelector(".phone-app").dataset.view = "home";
 
-if (storedKakaoMapKey) {
-  initializeKakaoMap();
+if (kakaoMapKeyInput && !kakaoMapKeyInput.value) {
+  kakaoMapKeyInput.value = "dc140cc7273dca9367e4384de951ff75";
 }
+initializeKakaoMap();
 
 window.addEventListener("load", () => {
   const splashScreen = document.querySelector("#splashScreen");
