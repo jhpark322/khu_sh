@@ -8,6 +8,271 @@
   </head>
   <body>
     <header class="topbar">
+      <a class="brand" href="#home" data-view-link="home">
+        <span class="brand-mark">AG</span>
+        <span>
+          <strong>Airdrop Gallery</strong>
+          <small>KHU indie route pilot</small>
+        </span>
+      </a>
+      <nav class="topnav" aria-label="주요 화면">
+        <button class="nav-button active" data-view="home">홈</button>
+        <button class="nav-button" data-view="discover">발견</button>
+        <button class="nav-button" data-view="map">지도</button>
+        <button class="nav-button" data-view="track">감상</button>
+        <button class="nav-button" data-view="wallet">지갑</button>
+        <button class="nav-button" data-view="creator">창작자</button>
+      </nav>
+      <div class="wallet-pill">
+        <span>Culture Keys</span>
+        <strong id="keyBalance">25K</strong>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section id="home" class="view active">
+        <div class="home-hero">
+          <section class="hero-copy">
+            <p class="eyebrow">Location based indie music</p>
+            <h1>오늘 지나가는 길 위에, 아직 유명하지 않은 음악을 떨어뜨립니다.</h1>
+            <p class="hero-lead">
+              학교 앞 카페거리, 공원 벤치, 독립서점 같은 장소를 인디 음악의 첫 전시장으로 바꾸는 발견형 음악 앱.
+            </p>
+            <div class="hero-actions">
+              <button class="primary-button" data-view-jump="discover">오늘의 드롭 보기</button>
+              <button class="ghost-button" data-view-jump="map">지도에서 해금</button>
+            </div>
+          </section>
+
+          <section class="now-playing-panel" aria-label="오늘의 추천 음악">
+            <div class="vinyl-scene">
+              <div class="vinyl-disc"></div>
+              <img id="heroCover" alt="추천 트랙 커버" src="">
+            </div>
+            <div class="now-copy">
+              <p class="eyebrow">Now dropped near you</p>
+              <h2 id="heroTrackTitle">밤 산책</h2>
+              <p id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</p>
+              <div class="tag-row" id="heroTags">
+                <span>잔잔함</span>
+                <span>밤</span>
+                <span>산책</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="home-strip">
+          <article class="strip-item">
+            <strong>87</strong>
+            <span>상황 추천 점수</span>
+          </article>
+          <article class="strip-item">
+            <strong>30m</strong>
+            <span>현장 해금 반경</span>
+          </article>
+          <article class="strip-item">
+            <strong>24h</strong>
+            <span>감상권 유지 시간</span>
+          </article>
+          <article class="strip-item">
+            <strong>+45K</strong>
+            <span>리뷰까지 완료 시</span>
+          </article>
+        </section>
+      </section>
+
+      <section id="discover" class="view">
+        <div class="section-heading">
+          <p class="eyebrow">Jamendo API</p>
+          <h2>실제 인디 트랙을 불러와 드롭으로 배치</h2>
+        </div>
+
+        <div class="discover-layout">
+          <section class="api-panel">
+            <div class="api-copy">
+              <h3>Jamendo 연결</h3>
+              <p>client_id를 넣으면 Jamendo의 독립 아티스트 트랙을 불러와 지도, 플레이어, 추천 카드에 바로 반영합니다.</p>
+            </div>
+            <label class="field-label" for="jamendoClientId">Jamendo client_id</label>
+            <div class="inline-form">
+              <input id="jamendoClientId" type="text" autocomplete="off" placeholder="developer.jamendo.com에서 발급">
+              <button class="primary-button compact" id="loadJamendo">API 불러오기</button>
+            </div>
+            <div class="filter-row" aria-label="음악 분위기 선택">
+              <button class="filter-chip active" data-tag="indie">indie</button>
+              <button class="filter-chip" data-tag="acoustic">acoustic</button>
+              <button class="filter-chip" data-tag="lofi">lofi</button>
+              <button class="filter-chip" data-tag="ambient">ambient</button>
+            </div>
+            <p class="status-text" id="apiStatus">client_id가 없으면 내장 데모 트랙으로 작동합니다.</p>
+          </section>
+
+          <section class="track-grid" id="trackGrid" aria-label="불러온 인디 트랙"></section>
+        </div>
+      </section>
+
+      <section id="map" class="view">
+        <div class="section-heading">
+          <p class="eyebrow">Discovery Map</p>
+          <h2>내 동선과 가장 가까운 음악 드롭</h2>
+        </div>
+
+        <div class="map-layout">
+          <div class="map-canvas" aria-label="드롭 지도">
+            <svg viewBox="0 0 720 460" role="img" aria-label="경희대 주변 음악 드롭 지도">
+              <rect class="map-bg" x="0" y="0" width="720" height="460"></rect>
+              <path class="road main" d="M42 334 C156 252 248 294 348 218 S558 158 682 90"></path>
+              <path class="road sub" d="M116 418 C220 342 305 338 430 288 S590 260 690 212"></path>
+              <path class="road foot" d="M52 116 C170 156 202 96 318 128 S520 76 640 132"></path>
+              <path class="route-path" d="M86 350 C180 300 252 306 346 230 S520 176 620 126"></path>
+              <circle class="user-dot" id="userDot" cx="520" cy="170" r="10"></circle>
+              <g class="drop-marker selected" data-drop-index="0">
+                <circle cx="550" cy="150" r="22"></circle>
+                <text x="550" y="157">♪</text>
+              </g>
+              <g class="drop-marker" data-drop-index="1">
+                <circle cx="338" cy="230" r="20"></circle>
+                <text x="338" y="237">♪</text>
+              </g>
+              <g class="drop-marker" data-drop-index="2">
+                <circle cx="190" cy="306" r="20"></circle>
+                <text x="190" y="313">♪</text>
+              </g>
+              <text class="place-label" x="500" y="116">정문 앞 카페</text>
+              <text class="place-label" x="286" y="204">중앙광장</text>
+              <text class="place-label" x="142" y="280">독립서점</text>
+            </svg>
+          </div>
+
+          <article class="drop-card">
+            <img id="dropCover" alt="선택된 트랙 커버" src="">
+            <p class="eyebrow">Selected Drop</p>
+            <h3 id="dropTitle">밤 산책</h3>
+            <p id="dropMeta">Blue Room · 정문 앞 카페 · 18m</p>
+            <div class="progress-track">
+              <span id="distanceBar"></span>
+            </div>
+            <p class="status-text" id="unlockStatus">해금 가능: 반경 안에 있습니다.</p>
+            <button class="primary-button" id="unlockButton">현장 해금</button>
+            <button class="ghost-button" id="moveCloserButton">데모 위치 이동</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="track" class="view">
+        <div class="section-heading">
+          <p class="eyebrow">Listening Pass</p>
+          <h2>24시간 감상권과 리뷰 리워드</h2>
+        </div>
+
+        <div class="track-layout">
+          <article class="player-panel">
+            <div class="album-art">
+              <img id="playerCover" alt="재생 중인 트랙 커버" src="">
+              <span id="playerTitle">Night Walk</span>
+            </div>
+            <div class="player-copy">
+              <p class="eyebrow" id="playerArtist">Blue Room</p>
+              <h3 id="playerHeading">밤 산책</h3>
+              <p id="passText">아직 해금 전입니다.</p>
+              <audio id="audioPlayer" controls preload="none"></audio>
+              <div class="listen-bar"><span id="listenProgress"></span></div>
+              <button class="primary-button" id="listenButton">70%까지 감상 처리</button>
+            </div>
+          </article>
+
+          <article class="review-panel">
+            <h3>감상 피드백</h3>
+            <div class="segmented">
+              <button class="segment active" data-feedback="recommend">추천</button>
+              <button class="segment" data-feedback="not-recommend">취향 아님</button>
+            </div>
+            <div class="tag-row selectable">
+              <button>장소와 잘 어울림</button>
+              <button>다시 듣고 싶음</button>
+              <button>밤 산책 감성</button>
+            </div>
+            <textarea id="reviewText">밤에 카페 앞에서 듣기 좋은 잔잔한 곡이었습니다. 보컬이 담담해서 과하지 않았고, 이 장소의 분위기와 잘 맞았습니다. 친구에게도 추천하고 싶지만 후반부 전개는 조금 단조롭게 느껴졌습니다.</textarea>
+            <button class="primary-button" id="submitReview">리뷰 제출</button>
+            <p class="status-text" id="reviewResult">감상률 70% 이상이면 리뷰 리워드를 받을 수 있습니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="wallet" class="view">
+        <div class="section-heading">
+          <p class="eyebrow">Culture Key Wallet</p>
+          <h2>다음 발견과 공연 예약으로 돌아가는 리워드</h2>
+        </div>
+
+        <div class="wallet-grid">
+          <article class="reward-panel">
+            <h3>사용 가능한 리워드</h3>
+            <button class="reward-item" id="spendHint">
+              <span>다음 위치 힌트</span>
+              <strong>10K</strong>
+            </button>
+            <button class="reward-item" id="applyDiscount">
+              <span>공연 할인 적용</span>
+              <strong>100K</strong>
+            </button>
+            <p class="status-text" id="walletMessage">힌트를 열거나 예약 할인 시뮬레이션을 확인하세요.</p>
+          </article>
+          <article class="ticket">
+            <p class="eyebrow">Booking</p>
+            <h3>Blue Room 소극장 라이브</h3>
+            <div class="price-row"><span>원가</span><strong>15,000원</strong></div>
+            <div class="price-row"><span>할인</span><strong id="discountValue">0원</strong></div>
+            <div class="price-row total"><span>최종가</span><strong id="finalPrice">15,000원</strong></div>
+            <div class="qr-box">QR</div>
+          </article>
+        </div>
+      </section>
+
+      <section id="creator" class="view">
+        <div class="section-heading">
+          <p class="eyebrow">Creator Dashboard</p>
+          <h2>어떤 동선과 시간대에서 반응이 생겼는지</h2>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="metric"><span>discoveries</span><strong id="metricDiscoveries">120</strong></article>
+          <article class="metric"><span>unlocks</span><strong id="metricUnlocks">86</strong></article>
+          <article class="metric"><span>reviews</span><strong id="metricReviews">28</strong></article>
+          <article class="metric"><span>booking clicks</span><strong id="metricBookings">9</strong></article>
+        </div>
+        <article class="insight-panel">
+          <h3>반응 키워드</h3>
+          <div class="tag-row">
+            <span>카페거리</span>
+            <span>저녁</span>
+            <span>잔잔함</span>
+            <span>장소와 잘 어울림</span>
+          </div>
+          <div class="bar-chart">
+            <div style="height: 72%"><span>정문</span></div>
+            <div style="height: 48%"><span>광장</span></div>
+            <div style="height: 36%"><span>서점</span></div>
+            <div style="height: 64%"><span>카페</span></div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Airdrop Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
       <div>
         <p class="eyebrow">KHU Pilot</p>
         <h1>Airdrop Gallery</h1>
