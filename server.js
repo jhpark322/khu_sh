@@ -147,7 +147,7 @@ express.static = (root) => {
   return middleware;
 };
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyAxIi7qUITYaEGfXA4YC0UyWOtXPE_0GT4";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyAbuQsN9k-cSECT7ODKPWV3hSL19YMkpWs";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const GEMINI_URL = GEMINI_API_KEY
   ? `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
