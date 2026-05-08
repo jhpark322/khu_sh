@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Airdrop Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">KHU Pilot</p>
+        <h1>Airdrop Gallery</h1>
+      </div>
+      <div class="wallet-pill">
+        <span>Culture Keys</span>
+        <strong id="keyBalance">25K</strong>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="sidebar">
+        <button class="nav-button active" data-view="route">동선</button>
+        <button class="nav-button" data-view="map">지도</button>
+        <button class="nav-button" data-view="track">감상</button>
+        <button class="nav-button" data-view="wallet">지갑</button>
+        <button class="nav-button" data-view="creator">창작자</button>
+      </aside>
+
+      <section class="content">
+        <section id="route" class="view active">
+          <div class="section-heading">
+            <p class="eyebrow">Route Setup</p>
+            <h2>기숙사에서 강의동까지, 오늘의 음악 동선</h2>
+          </div>
+          <div class="route-grid">
+            <article class="panel">
+              <h3>자주 다니는 길</h3>
+              <div class="route-line">
+                <span>기숙사</span>
+                <span>정문</span>
+                <span>카페거리</span>
+                <span>강의동</span>
+              </div>
+              <label class="field-label" for="moodSelect">선호 분위기</label>
+              <select id="moodSelect">
+                <option>잔잔한 인디, 로파이, 밤 산책</option>
+                <option>청춘 밴드, 축제, 캠퍼스</option>
+                <option>카페, 공부, 오후 집중</option>
+              </select>
+              <button class="primary-button" id="saveRoute">동선 저장</button>
+            </article>
+
+            <article class="panel recommendation">
+              <div class="score-ring">
+                <span id="scoreValue">87</span>
+                <small>score</small>
+              </div>
+              <div>
+                <p class="eyebrow">Context Match</p>
+                <h3>밤 산책</h3>
+                <p>오늘 저녁, 자주 지나는 카페거리에 밤 산책과 어울리는 인디곡이 드롭되었습니다.</p>
+                <div class="tag-row">
+                  <span>저녁</span>
+                  <span>카페거리</span>
+                  <span>잔잔함</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="map" class="view">
+          <div class="section-heading">
+            <p class="eyebrow">Discovery Map</p>
+            <h2>반경 30m 안에서 열리는 숨은 음악</h2>
+          </div>
+          <div class="map-layout">
+            <div class="map-canvas" aria-label="드롭 지도">
+              <svg viewBox="0 0 720 460" role="img" aria-label="캠퍼스 주변 동선 지도">
+                <path class="road main" d="M40 330 C160 260 250 300 350 220 S560 160 680 90"/>
+                <path class="road sub" d="M120 420 C220 340 300 340 430 290 S590 260 690 210"/>
+                <path class="route-path" d="M85 350 C180 300 250 305 345 230 S520 175 620 125"/>
+                <circle class="user-dot" id="userDot" cx="520" cy="170" r="10"/>
+                <g class="drop-marker selected" data-drop="night">
+                  <circle cx="550" cy="150" r="20"/>
+                  <text x="550" y="156">♪</text>
+                </g>
+                <g class="drop-marker" data-drop="summer">
+                  <circle cx="335" cy="230" r="18"/>
+                  <text x="335" y="236">♪</text>
+                </g>
+                <g class="drop-marker" data-drop="book">
+                  <circle cx="190" cy="306" r="18"/>
+                  <text x="190" y="312">♪</text>
+                </g>
+                <text class="place-label" x="510" y="118">정문 앞 카페</text>
+                <text class="place-label" x="292" y="205">중앙광장</text>
+                <text class="place-label" x="145" y="280">독립서점</text>
+              </svg>
+            </div>
+
+            <article class="panel drop-card">
+              <p class="eyebrow">Selected Drop</p>
+              <h3 id="dropTitle">밤 산책</h3>
+              <p id="dropMeta">Blue Room · 정문 앞 카페 · 18m</p>
+              <div class="progress-track">
+                <span id="distanceBar"></span>
+              </div>
+              <p class="status-text" id="unlockStatus">해금 가능: 반경 안에 있습니다.</p>
+              <button class="primary-button" id="unlockButton">현장 해금</button>
+              <button class="ghost-button" id="moveCloserButton">데모 위치 이동</button>
+            </article>
+          </div>
+        </section>
+
+        <section id="track" class="view">
+          <div class="section-heading">
+            <p class="eyebrow">Listening Pass</p>
+            <h2>24시간 감상권과 리뷰 리워드</h2>
+          </div>
+          <div class="track-layout">
+            <article class="player-panel">
+              <div class="album-art">
+                <span>Night Walk</span>
+              </div>
+              <div class="player-copy">
+                <p class="eyebrow">Blue Room</p>
+                <h3>밤 산책</h3>
+                <p id="passText">아직 해금 전입니다.</p>
+                <div class="listen-bar"><span id="listenProgress"></span></div>
+                <button class="primary-button" id="listenButton">70%까지 감상</button>
+              </div>
+            </article>
+
+            <article class="panel review-panel">
+              <h3>감상 피드백</h3>
+              <div class="segmented">
+                <button class="segment active" data-feedback="recommend">추천</button>
+                <button class="segment" data-feedback="not-recommend">취향 아님</button>
+              </div>
+              <div class="tag-row selectable">
+                <button>장소와 잘 어울림</button>
+                <button>다시 듣고 싶음</button>
+                <button>밤 산책 감성</button>
+              </div>
+              <textarea id="reviewText">밤에 카페 앞에서 듣기 좋은 잔잔한 곡이었습니다. 보컬이 담담해서 과하지 않았고, 이 장소의 분위기와 잘 맞았습니다.</textarea>
+              <button class="primary-button" id="submitReview">리뷰 제출</button>
+              <p class="status-text" id="reviewResult">감상률 70% 이상이면 리뷰 리워드를 받을 수 있습니다.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="wallet" class="view">
+          <div class="section-heading">
+            <p class="eyebrow">Culture Key Wallet</p>
+            <h2>다음 발견과 공연 예약으로 돌아가는 리워드</h2>
+          </div>
+          <div class="wallet-grid">
+            <article class="panel">
+              <h3>사용 가능한 리워드</h3>
+              <button class="reward-item" id="spendHint">
+                <span>다음 위치 힌트</span>
+                <strong>10K</strong>
+              </button>
+              <button class="reward-item" id="applyDiscount">
+                <span>공연 할인 적용</span>
+                <strong>100K</strong>
+              </button>
+              <p class="status-text" id="walletMessage">힌트를 열거나 예약 할인 시뮬레이션을 확인하세요.</p>
+            </article>
+            <article class="panel ticket">
+              <p class="eyebrow">Booking</p>
+              <h3>Blue Room 소극장 라이브</h3>
+              <div class="price-row"><span>원가</span><strong>15,000원</strong></div>
+              <div class="price-row"><span>할인</span><strong id="discountValue">0원</strong></div>
+              <div class="price-row total"><span>최종가</span><strong id="finalPrice">15,000원</strong></div>
+              <div class="qr-box">QR</div>
+            </article>
+          </div>
+        </section>
+
+        <section id="creator" class="view">
+          <div class="section-heading">
+            <p class="eyebrow">Creator Dashboard</p>
+            <h2>어떤 동선과 시간대에서 반응이 생겼는지</h2>
+          </div>
+          <div class="dashboard-grid">
+            <article class="metric"><span>discoveries</span><strong id="metricDiscoveries">120</strong></article>
+            <article class="metric"><span>unlocks</span><strong id="metricUnlocks">86</strong></article>
+            <article class="metric"><span>reviews</span><strong id="metricReviews">28</strong></article>
+            <article class="metric"><span>booking clicks</span><strong id="metricBookings">9</strong></article>
+          </div>
+          <article class="panel insight-panel">
+            <h3>반응 키워드</h3>
+            <div class="tag-row">
+              <span>카페거리</span>
+              <span>저녁</span>
+              <span>잔잔함</span>
+              <span>장소와 잘 어울림</span>
+            </div>
+            <div class="bar-chart">
+              <div style="height: 72%"><span>정문</span></div>
+              <div style="height: 48%"><span>광장</span></div>
+              <div style="height: 36%"><span>서점</span></div>
+              <div style="height: 64%"><span>카페</span></div>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
