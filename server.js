@@ -35,5 +35,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(4173, "127.0.0.1", () => {
-  console.log("Airdrop Gallery running at http://127.0.0.1:4173");
+  console.log("Where Indi running at http://127.0.0.1:4173");
 });
