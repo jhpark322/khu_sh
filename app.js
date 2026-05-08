@@ -6,6 +6,7 @@ const demoTracks = [
     distance: 18,
     score: 87,
     tags: ["잔잔함", "밤", "산책"],
+    coords: { lat: 37.5939, lng: 127.0528 },
     image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80",
     audio: "",
     reason: "자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다."
@@ -17,6 +18,7 @@ const demoTracks = [
     distance: 42,
     score: 79,
     tags: ["청춘", "밴드", "캠퍼스"],
+    coords: { lat: 37.5969, lng: 127.0522 },
     image: "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&q=80",
     audio: "",
     reason: "축제 분위기의 중앙광장과 청춘 밴드 사운드가 잘 맞습니다."
@@ -28,6 +30,7 @@ const demoTracks = [
     distance: 71,
     score: 82,
     tags: ["로파이", "독서", "오후"],
+    coords: { lat: 37.5919, lng: 127.055 },
     image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=900&q=80",
     audio: "",
     reason: "조용한 독립서점 분위기와 로파이 질감이 잘 어울립니다."
@@ -43,6 +46,9 @@ const state = {
   activeTrack: 0,
   activeTag: "indie",
   tracks: demoTracks,
+  kakaoMap: null,
+  kakaoMarkers: [],
+  kakaoMapReady: false,
   metrics: {
     discoveries: 120,
     unlocks: 86,
@@ -61,15 +67,25 @@ const walletMessage = document.querySelector("#walletMessage");
 const apiStatus = document.querySelector("#apiStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const clientInput = document.querySelector("#jamendoClientId");
+const kakaoMapKeyInput = document.querySelector("#kakaoMapKey");
+const kakaoMapStatus = document.querySelector("#kakaoMapStatus");
+const kakaoMapContainer = document.querySelector("#kakaoMap");
+const mapCanvas = document.querySelector(".map-canvas");
 
 const storedClientId = localStorage.getItem("jamendoClientId");
 if (storedClientId) clientInput.value = storedClientId;
+
+const storedKakaoMapKey = localStorage.getItem("kakaoMapJavaScriptKey");
+if (storedKakaoMapKey && kakaoMapKeyInput) kakaoMapKeyInput.value = storedKakaoMapKey;
 
 function setView(id) {
   views.forEach((view) => view.classList.toggle("active", view.id === id));
   navButtons.forEach((button) => button.classList.toggle("active", button.dataset.view === id));
   const phoneApp = document.querySelector(".phone-app");
   if (phoneApp) phoneApp.dataset.view = id;
+  if (id === "map" && state.kakaoMapReady) {
+    requestAnimationFrame(renderKakaoMap);
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -86,6 +102,19 @@ function updateMetrics() {
 
 function currentTrack() {
   return state.tracks[state.activeTrack] || state.tracks[0];
+}
+
+const placeCoords = [
+  { lat: 37.5939, lng: 127.0528 },
+  { lat: 37.5969, lng: 127.0522 },
+  { lat: 37.5919, lng: 127.055 },
+  { lat: 37.5977, lng: 127.0506 },
+  { lat: 37.5958, lng: 127.0538 },
+  { lat: 37.5929, lng: 127.0518 }
+];
+
+function coordsForTrack(track, index = state.activeTrack) {
+  return track.coords || placeCoords[index % placeCoords.length];
 }
 
 function setText(selector, value) {
@@ -169,6 +198,8 @@ function renderSelectedTrack() {
 
   document.querySelector("#unlockStatus").textContent =
     track.distance <= 30 ? "지금 재생 가능: 가까운 위치입니다." : "조금 더 가까이 가면 바로 들을 수 있어요.";
+
+  if (state.kakaoMapReady) renderKakaoMap();
 }
 
 function renderMapMarkers() {
@@ -184,6 +215,121 @@ function renderMapMarkers() {
       renderAll();
     });
   });
+}
+
+function loadKakaoMapsSdk(appKey) {
+  return new Promise((resolve, reject) => {
+    if (window.kakao?.maps) {
+      window.kakao.maps.load(resolve);
+      return;
+    }
+
+    const oldScript = document.querySelector("#kakaoMapsSdk");
+    if (oldScript && oldScript.dataset.appKey !== appKey) {
+      oldScript.remove();
+    }
+
+    const existingScript = document.querySelector("#kakaoMapsSdk");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => window.kakao.maps.load(resolve), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Kakao Maps SDK를 불러오지 못했습니다.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "kakaoMapsSdk";
+    script.dataset.appKey = appKey;
+    script.async = true;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false`;
+    script.addEventListener("load", () => {
+      if (!window.kakao?.maps) {
+        reject(new Error("Kakao Maps SDK 초기화에 실패했습니다."));
+        return;
+      }
+      window.kakao.maps.load(resolve);
+    });
+    script.addEventListener("error", () => reject(new Error("Kakao Maps SDK를 불러오지 못했습니다.")));
+    document.head.appendChild(script);
+  });
+}
+
+function clearKakaoMarkers() {
+  state.kakaoMarkers.forEach((marker) => marker.setMap(null));
+  state.kakaoMarkers = [];
+}
+
+function renderKakaoMap() {
+  if (!state.kakaoMapReady || !window.kakao?.maps || !kakaoMapContainer) return;
+
+  const kakao = window.kakao;
+  const activeCoords = coordsForTrack(currentTrack());
+  const activeCenter = new kakao.maps.LatLng(activeCoords.lat, activeCoords.lng);
+
+  if (!state.kakaoMap) {
+    state.kakaoMap = new kakao.maps.Map(kakaoMapContainer, {
+      center: activeCenter,
+      level: 4
+    });
+  } else {
+    state.kakaoMap.setCenter(activeCenter);
+  }
+
+  clearKakaoMarkers();
+  const bounds = new kakao.maps.LatLngBounds();
+
+  state.tracks.slice(0, 6).forEach((track, index) => {
+    const coords = coordsForTrack(track, index);
+    const position = new kakao.maps.LatLng(coords.lat, coords.lng);
+    const marker = new kakao.maps.Marker({
+      map: state.kakaoMap,
+      position,
+      title: `${track.title} - ${track.artist}`
+    });
+
+    kakao.maps.event.addListener(marker, "click", () => {
+      state.activeTrack = index;
+      state.unlocked = false;
+      state.listened = false;
+      state.reviewed = false;
+      listenProgress.style.width = "0";
+      renderAll();
+      setView("map");
+    });
+
+    state.kakaoMarkers.push(marker);
+    bounds.extend(position);
+  });
+
+  state.kakaoMap.setBounds(bounds);
+  state.kakaoMap.setCenter(activeCenter);
+
+  requestAnimationFrame(() => {
+    state.kakaoMap.relayout();
+    state.kakaoMap.setCenter(activeCenter);
+  });
+}
+
+async function initializeKakaoMap() {
+  const appKey = kakaoMapKeyInput?.value.trim();
+  if (!appKey) {
+    if (kakaoMapStatus) kakaoMapStatus.textContent = "Kakao JavaScript 키를 넣으면 실제 카카오맵으로 전환됩니다.";
+    return;
+  }
+
+  localStorage.setItem("kakaoMapJavaScriptKey", appKey);
+  if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵을 불러오는 중입니다.";
+
+  try {
+    await loadKakaoMapsSdk(appKey);
+    state.kakaoMapReady = true;
+    mapCanvas?.classList.add("kakao-active");
+    renderKakaoMap();
+    if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵 연결 완료. 트랙 위치를 실제 지도 위에 표시합니다.";
+  } catch (error) {
+    state.kakaoMapReady = false;
+    mapCanvas?.classList.remove("kakao-active");
+    if (kakaoMapStatus) kakaoMapStatus.textContent = `${error.message} 데모 지도를 유지합니다.`;
+  }
 }
 
 function renderAll() {
@@ -231,6 +377,7 @@ function normalizeJamendoTrack(track, index) {
     place: places[index % places.length],
     distance: distances[index % distances.length],
     score: Math.max(68, 92 - index * 4),
+    coords: placeCoords[index % placeCoords.length],
     tags: tags.length ? tags : [state.activeTag, "indie", "live"],
     image: track.album_image || track.image || demoTracks[index % demoTracks.length].image,
     audio: track.audio || track.audiodownload || "",
@@ -301,6 +448,7 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
 });
 
 document.querySelector("#loadJamendo").addEventListener("click", loadJamendoTracks);
+document.querySelector("#loadKakaoMap").addEventListener("click", initializeKakaoMap);
 
 document.querySelector("#moveCloserButton").addEventListener("click", () => {
   const userDot = document.querySelector("#userDot");
@@ -410,3 +558,19 @@ document.querySelector("#applyDiscount").addEventListener("click", () => {
 
 renderMapMarkers();
 renderAll();
+
+document.querySelector(".phone-app").dataset.view = "home";
+
+if (storedKakaoMapKey) {
+  initializeKakaoMap();
+}
+
+window.addEventListener("load", () => {
+  const splashScreen = document.querySelector("#splashScreen");
+  window.setTimeout(() => {
+    splashScreen?.classList.add("hide");
+  }, 2000);
+  window.setTimeout(() => {
+    splashScreen?.remove();
+  }, 2400);
+});
