@@ -266,13 +266,19 @@ function updateKakaoUserMarker() {
   }
 }
 
+function setGeoPill(text, active) {
+  const pill = document.querySelector("#geoStatus");
+  const label = document.querySelector("#geoStatusText");
+  if (label) label.textContent = text;
+  if (pill) pill.classList.toggle("active", !!active);
+}
+
 function startGeolocation() {
-  const geoStatus = document.querySelector("#geoStatus");
   if (!navigator.geolocation) {
-    if (geoStatus) geoStatus.textContent = "이 브라우저는 GPS를 지원하지 않습니다.";
+    setGeoPill("위치 미지원", false);
     return;
   }
-  if (geoStatus) geoStatus.textContent = "GPS 위치 확인 중...";
+  setGeoPill("위치 확인 중...", false);
 
   navigator.geolocation.getCurrentPosition(
     pos => {
@@ -281,11 +287,10 @@ function startGeolocation() {
       renderSelectedTrack();
       renderTrackGrid();
       if (state.kakaoMapReady) renderKakaoMap();
-      const acc = Math.round(pos.coords.accuracy);
-      if (geoStatus) geoStatus.textContent = `📍 내 위치 확인됨 · 정확도 ±${acc}m`;
+      setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
     },
-    err => {
-      if (geoStatus) geoStatus.textContent = "위치 권한을 허용하면 실제 거리로 잠금 해제됩니다.";
+    () => {
+      setGeoPill("위치 권한 필요", false);
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
@@ -297,6 +302,7 @@ function startGeolocation() {
       updateRealDistances();
       renderSelectedTrack();
       updateKakaoUserMarker();
+      setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
     },
     () => {},
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }

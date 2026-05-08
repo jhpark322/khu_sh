@@ -546,6 +546,43 @@ textarea {
   background: #101a13;
 }
 
+.geo-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  pointer-events: none;
+  transition: color 0.3s;
+}
+
+.geo-pill.active {
+  color: var(--green);
+}
+
+.geo-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.geo-pill.active .geo-dot {
+  background: var(--green);
+  box-shadow: 0 0 0 2px rgba(30, 215, 96, 0.3);
+}
+
 .map-api-panel {
   display: grid;
   gap: 10px;

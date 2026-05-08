@@ -140,10 +140,12 @@
             <h2>내 주변에서 바로 듣기</h2>
           </div>
 
-          <p class="status-text" id="geoStatus" style="margin-top:12px;padding:0 4px"></p>
-
           <div class="map-canvas" aria-label="근처 음악 지도">
             <div id="kakaoMap" class="kakao-map" aria-label="카카오 지도"></div>
+            <div class="geo-pill" id="geoStatus">
+              <span class="geo-dot"></span>
+              <span id="geoStatusText">위치 확인 중...</span>
+            </div>
             <svg class="map-fallback" viewBox="0 0 720 460" role="img" aria-label="경희대 주변 인디 음악 지도">
               <rect class="map-bg" x="0" y="0" width="720" height="460"></rect>
               <path class="road main" d="M42 334 C156 252 248 294 348 218 S558 158 682 90"></path>
