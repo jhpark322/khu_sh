@@ -50,7 +50,11 @@ const state = {
   pendingListenRewards: new Set(),
   playHistory: [],
   playedLocations: [],
+  heardTracks: [],
+  visitedPlaces: {},
   simulatedTimer: null,
+  simulatedProgress: 0,
+  promptedPlaces: {},
   activeTrack: 0,
   activeTag: "indie",
   tracks: demoTracks,
@@ -103,6 +107,8 @@ const keyBalance = document.querySelector("#keyBalance");
 const keyBalance2 = document.querySelector("#keyBalance2");
 const passText = document.querySelector("#passText");
 const listenProgress = document.querySelector("#listenProgress");
+const currentTimeText = document.querySelector("#currentTimeText");
+const durationText = document.querySelector("#durationText");
 const ratingResult = document.querySelector("#ratingResult");
 const walletMessage = document.querySelector("#walletMessage");
 const apiStatus = document.querySelector("#apiStatus");
@@ -110,6 +116,9 @@ const audioPlayer = document.querySelector("#audioPlayer");
 const kakaoMapContainer = document.querySelector("#kakaoMap");
 const mapCanvas = document.querySelector(".map-full");
 const playedSongLayer = document.querySelector("#playedSongLayer");
+const mapPlacePanel = document.querySelector("#mapPlacePanel");
+const mapPlaceTitle = document.querySelector("#mapPlaceTitle");
+const mapPlaceTrackList = document.querySelector("#mapPlaceTrackList");
 
 function setView(id) {
   views.forEach((view) => view.classList.toggle("active", view.id === id));
@@ -160,8 +169,180 @@ const placeCoords = [
   { lat: 37.2415, lng: 127.0810 }  // 푸른솔
 ];
 
+const demoUserLocation = { lat: 37.24185, lng: 127.08025 };
+const demoSeedPlaceName = "내 위치 데모 구역";
+
+function mapUserLocation() {
+  return state.userLocation || demoUserLocation;
+}
+
 function coordsForTrack(track, index = state.activeTrack) {
   return track.coords || placeCoords[index % placeCoords.length];
+}
+
+function formatTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function updatePlayerTime(current = 0, duration = 0) {
+  if (currentTimeText) currentTimeText.textContent = formatTime(current);
+  if (durationText) durationText.textContent = formatTime(duration);
+}
+
+function recommendationReason(track) {
+  if (!track) return "";
+  if (track.reason && !/[�]/.test(track.reason)) return track.reason;
+  const tags = (track.tags || []).slice(0, 2).join(", ") || "인디";
+  return `${track.place} 주변 분위기와 ${tags} 취향이 맞아서 추천했어요.`;
+}
+
+function nearestPlace(lat, lng) {
+  if (!Array.isArray(PLACES) || !PLACES.length) return null;
+  return PLACES
+    .map(place => ({ ...place, distance: getDistanceMeters(lat, lng, place.lat, place.lng) }))
+    .sort((a, b) => a.distance - b.distance)[0];
+}
+
+function placeForTrack(track) {
+  const coords = coordsForTrack(track);
+  const place = nearestPlace(coords.lat, coords.lng);
+  return place || { name: track.place || "음악 구역", lat: coords.lat, lng: coords.lng, distance: 0 };
+}
+
+function saveListeningMemory() {
+  localStorage.setItem("whereIndiListeningMemory", JSON.stringify({
+    playHistory: state.playHistory,
+    playedLocations: state.playedLocations,
+    heardTracks: state.heardTracks,
+    visitedPlaces: state.visitedPlaces
+  }));
+}
+
+function restoreListeningMemory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("whereIndiListeningMemory") || "{}");
+    if (Array.isArray(saved.playHistory)) state.playHistory = saved.playHistory;
+    if (Array.isArray(saved.playedLocations)) state.playedLocations = saved.playedLocations;
+    if (Array.isArray(saved.heardTracks)) state.heardTracks = saved.heardTracks;
+    if (saved.visitedPlaces && typeof saved.visitedPlaces === "object") state.visitedPlaces = saved.visitedPlaces;
+  } catch {
+    localStorage.removeItem("whereIndiListeningMemory");
+  }
+}
+
+function resetListeningMemoryForDemo() {
+  localStorage.removeItem("whereIndiListeningMemory");
+  state.playHistory = [];
+  state.playedLocations = [];
+  state.heardTracks = [];
+  state.visitedPlaces = {};
+  state.listenedTrackIds.clear();
+  state.pendingListenRewards.clear();
+  state.listened = false;
+  state.reviewed = false;
+}
+
+function seedDemoSongsAtCurrentLocation() {
+  const coords = mapUserLocation();
+  const seedTracks = state.tracks.slice(0, 2);
+  if (!seedTracks.length) return;
+
+  state.playedLocations = state.playedLocations.filter(item => item.place !== demoSeedPlaceName);
+  state.playHistory = state.playHistory.filter(item => item.place !== demoSeedPlaceName);
+  state.heardTracks = state.heardTracks.filter(item => item.place !== demoSeedPlaceName);
+
+  const placeRecord = {
+    id: demoSeedPlaceName,
+    name: demoSeedPlaceName,
+    lat: coords.lat,
+    lng: coords.lng,
+    tracks: []
+  };
+
+  seedTracks.forEach((track) => {
+    const id = trackKey(track);
+    const marker = {
+      id,
+      title: track.title,
+      artist: track.artist,
+      image: track.image,
+      place: demoSeedPlaceName,
+      lat: coords.lat,
+      lng: coords.lng
+    };
+
+    placeRecord.tracks.unshift(marker);
+    state.playedLocations.unshift(marker);
+    state.playHistory.unshift({
+      id,
+      title: track.title,
+      artist: track.artist,
+      image: track.image,
+      place: demoSeedPlaceName,
+      reason: `${demoSeedPlaceName} 주변 분위기와 취향이 맞아서 데모용으로 배치했어요.`,
+      rating: null
+    });
+    state.heardTracks.unshift({
+      id,
+      title: track.title,
+      artist: track.artist,
+      image: track.image,
+      place: demoSeedPlaceName,
+      reason: `${demoSeedPlaceName} 주변 분위기와 취향이 맞아서 데모용으로 배치했어요.`,
+      rating: null
+    });
+  });
+
+  placeRecord.tracks = placeRecord.tracks.slice(0, 2);
+  state.visitedPlaces[demoSeedPlaceName] = placeRecord;
+  state.playedLocations = state.playedLocations.filter((item, index, arr) =>
+    arr.findIndex(other => other.id === item.id) === index
+  ).slice(0, 8);
+  state.playHistory = state.playHistory.filter((item, index, arr) =>
+    arr.findIndex(other => other.id === item.id) === index
+  ).slice(0, 8);
+  state.heardTracks = state.heardTracks.filter((item, index, arr) =>
+    arr.findIndex(other => other.id === item.id) === index
+  ).slice(0, 20);
+  saveListeningMemory();
+}
+
+function openMapPlacePanel(placeName) {
+  const place = state.visitedPlaces[placeName];
+  if (!place || !mapPlacePanel || !mapPlaceTrackList) return;
+
+  if (mapPlaceTitle) mapPlaceTitle.textContent = place.name;
+  mapPlaceTrackList.innerHTML = "";
+
+  place.tracks.forEach((item) => {
+    const row = document.createElement("button");
+    row.className = "map-place-track";
+    row.type = "button";
+    row.innerHTML = `
+      <img src="${item.image || ""}" alt="${item.title} 커버">
+      <div>
+        <strong>${item.title}</strong>
+        <span>${item.artist}</span>
+      </div>
+      <small>재생</small>
+    `;
+    row.addEventListener("click", () => {
+      selectHeardTrack(item.id, null);
+      state.unlocked = true;
+      renderSelectedTrack();
+      playCurrentTrack();
+    });
+    mapPlaceTrackList.appendChild(row);
+  });
+
+  mapPlacePanel.classList.add("show");
+}
+
+function closeMapPlacePanel() {
+  mapPlacePanel?.classList.remove("show");
 }
 
 function setText(selector, value) {
@@ -218,7 +399,7 @@ function renderTrackGrid() {
     info.innerHTML = `
       <strong>${track.title}</strong>
       <span>${track.artist}</span>
-      <span class="track-reason">${track.reason || track.place + " · " + track.distance + "m"}</span>
+      <span class="track-reason">${recommendationReason(track)}</span>
     `;
 
     const playBtn = document.createElement("button");
@@ -248,7 +429,7 @@ function renderSelectedTrack() {
   const meta = `${track.artist} · ${track.place} · ${track.distance}m`;
   setText("#heroTrackTitle", track.title);
   setText("#heroTrackArtist", meta);
-  setText("#heroReason", track.reason || "PCA 추천 결과를 바탕으로 지금 듣기 좋은 인디 트랙입니다.");
+  setText("#heroReason", recommendationReason(track));
   setText("#dropTitle", track.title);
   setText("#dropMeta", `${track.artist} · ${track.place}`);
   setText("#playerTitle", track.title);
@@ -275,14 +456,15 @@ function renderSelectedTrack() {
   }
 
   passText.textContent = state.unlocked
-    ? "근처에서 재생 중 · 24시간 동안 다시 듣기 가능"
-    : "근처 음악을 선택하면 바로 재생할 수 있어요.";
+    ? "재생 준비 완료 · 70% 이상 들으면 인디코인이 지급됩니다."
+    : "음악 구역에서 추천을 받거나 지도 기록에서 선택해 들을 수 있어요.";
 
   const canUnlock = track.distance <= 30;
   const unlockBtn = document.querySelector("#unlockButton");
   if (unlockBtn) unlockBtn.disabled = !canUnlock && !state.unlocked;
 
   setText("#unlockStatus", `${track.distance}m`);
+  updatePlayButtonState();
 
   if (state.kakaoMapReady) renderKakaoMap();
 }
@@ -310,11 +492,10 @@ function updateRealDistances() {
   });
 }
 
-function updateKakaoUserMarker() {
-  if (state.kakaoUserMarker) {
-    state.kakaoUserMarker.setMap(null);
-    state.kakaoUserMarker = null;
-  }
+function clearKakaoUserMarker() {
+  if (!state.kakaoUserMarker) return;
+  state.kakaoUserMarker.setMap(null);
+  state.kakaoUserMarker = null;
 }
 
 function setGeoPill(text, active) {
@@ -370,7 +551,8 @@ function startGeolocation() {
       state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       updateRealDistances();
       renderSelectedTrack();
-      updateKakaoUserMarker();
+      if (state.kakaoMapReady) renderKakaoMap();
+      else renderFallbackMapLayer();
       setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
       checkPlaceProximity(state.userLocation.lat, state.userLocation.lng);
     },
@@ -382,6 +564,7 @@ function startGeolocation() {
 function clearKakaoMarkers() {
   state.kakaoMarkers.forEach((marker) => marker.setMap(null));
   state.kakaoMarkers = [];
+  clearKakaoUserMarker();
 }
 
 function renderKakaoMap() {
@@ -389,7 +572,8 @@ function renderKakaoMap() {
 
   const kakao = window.kakao;
   const activeCoords = coordsForTrack(currentTrack());
-  const activeCenter = new kakao.maps.LatLng(activeCoords.lat, activeCoords.lng);
+  const userCoords = mapUserLocation();
+  const activeCenter = new kakao.maps.LatLng(userCoords.lat, userCoords.lng);
 
   if (!state.kakaoMap) {
     state.kakaoMap = new kakao.maps.Map(kakaoMapContainer, {
@@ -401,13 +585,63 @@ function renderKakaoMap() {
   }
 
   clearKakaoMarkers();
-  state.kakaoMap.setLevel(4);
-  state.kakaoMap.setCenter(activeCenter);
+  const bounds = new kakao.maps.LatLngBounds();
+  bounds.extend(activeCenter);
+  bounds.extend(new kakao.maps.LatLng(activeCoords.lat, activeCoords.lng));
+  renderKakaoUserMarker(userCoords);
+  renderNearbyTrackMarkers(bounds);
   renderPlayedSongMarkers();
+  state.kakaoMap.setBounds(bounds);
 
   requestAnimationFrame(() => {
     state.kakaoMap.relayout();
-    state.kakaoMap.setCenter(activeCenter);
+    state.kakaoMap.setBounds(bounds);
+  });
+}
+
+function renderKakaoUserMarker(coords) {
+  if (!state.kakaoMapReady || !window.kakao?.maps || !state.kakaoMap) return;
+  const kakao = window.kakao;
+  const position = new kakao.maps.LatLng(coords.lat, coords.lng);
+  const label = state.userLocation ? "내 위치" : "데모 위치";
+  state.kakaoUserMarker = new kakao.maps.CustomOverlay({
+    map: state.kakaoMap,
+    position,
+    yAnchor: 0.5,
+    content: `
+      <div class="kakao-user-marker" aria-label="${label}">
+        <span></span>
+        <strong>${label}</strong>
+      </div>
+    `
+  });
+}
+
+function renderNearbyTrackMarkers(bounds) {
+  if (!state.kakaoMapReady || !window.kakao?.maps || !state.kakaoMap) return;
+  const kakao = window.kakao;
+
+  Object.values(state.visitedPlaces).forEach((place) => {
+    const position = new kakao.maps.LatLng(place.lat, place.lng);
+    bounds?.extend(position);
+    const latest = place.tracks[0];
+    const count = place.tracks.length;
+
+    const content = `
+      <button class="kakao-track-marker visited" type="button" data-place="${escapeHtml(place.name)}">
+        <span>♪</span>
+        <strong>${escapeHtml(place.name)}</strong>
+        <small>${count}곡</small>
+      </button>
+    `;
+    const marker = new kakao.maps.CustomOverlay({
+      map: state.kakaoMap,
+      position,
+      content,
+      yAnchor: 1.1
+    });
+    state.kakaoMarkers.push(marker);
+
   });
 }
 
@@ -424,6 +658,8 @@ function renderAll() {
   renderSelectedTrack();
   renderTrackGrid();
   renderPlayHistory();
+  renderHeardTrackList();
+  renderFallbackMapLayer();
 }
 
 const trackAudio = new Audio();
@@ -432,12 +668,28 @@ let playingIndex = null;
 function addPlayHistory(track) {
   if (!track) return;
   const id = trackKey(track);
+  const place = placeForTrack(track);
+  const heardItem = {
+    id,
+    title: track.title,
+    artist: track.artist,
+    image: track.image,
+    place: place.name,
+    reason: recommendationReason(track),
+    rating: null
+  };
   state.playHistory = [
-    { id, title: track.title, artist: track.artist, image: track.image },
+    heardItem,
     ...state.playHistory.filter(item => item.id !== id)
   ].slice(0, 8);
+  state.heardTracks = [
+    heardItem,
+    ...state.heardTracks.filter(item => item.id !== id)
+  ].slice(0, 20);
   recordPlayedLocation(track);
+  saveListeningMemory();
   renderPlayHistory();
+  renderHeardTrackList();
 }
 
 function renderPlayHistory() {
@@ -464,6 +716,42 @@ function renderPlayHistory() {
   });
 }
 
+function renderHeardTrackList() {
+  const list = document.querySelector("#heardTrackList");
+  if (!list) return;
+
+  if (!state.heardTracks.length) {
+    list.innerHTML = `<p class="status-text">아직 들었던 노래가 없습니다.</p>`;
+    return;
+  }
+
+  list.innerHTML = "";
+  state.heardTracks.forEach((item) => {
+    const row = document.createElement("button");
+    row.className = "heard-track-item";
+    row.type = "button";
+    row.innerHTML = `
+      <img src="${item.image || ""}" alt="${item.title} 커버">
+      <div>
+        <strong>${item.title}</strong>
+        <span>${item.artist} · ${item.place}</span>
+        <small>${item.rating ? "★".repeat(item.rating) : "별점 대기"} · ${item.reason}</small>
+      </div>
+    `;
+    row.addEventListener("click", () => selectHeardTrack(item.id, "track"));
+    list.appendChild(row);
+  });
+}
+
+function selectHeardTrack(id, targetView = "track") {
+  const index = state.tracks.findIndex(track => trackKey(track) === id);
+  if (index >= 0) {
+    selectTrack(index, targetView);
+    state.unlocked = true;
+    renderSelectedTrack();
+  }
+}
+
 function playLocationFor(track) {
   const fallback = coordsForTrack(track);
   return {
@@ -474,13 +762,15 @@ function playLocationFor(track) {
 
 function recordPlayedLocation(track) {
   const id = trackKey(track);
-  const coords = playLocationFor(track);
+  const place = placeForTrack(track);
+  const coords = { lat: place.lat, lng: place.lng };
   const existing = state.playedLocations.find(item => item.id === id);
   const marker = {
     id,
     title: track.title,
     artist: track.artist,
     image: track.image,
+    place: place.name,
     lat: coords.lat,
     lng: coords.lng
   };
@@ -488,11 +778,26 @@ function recordPlayedLocation(track) {
   if (existing) Object.assign(existing, marker);
   else state.playedLocations.unshift(marker);
 
+  const placeRecord = state.visitedPlaces[place.name] || {
+    id: place.name,
+    name: place.name,
+    lat: place.lat,
+    lng: place.lng,
+    tracks: []
+  };
+  placeRecord.tracks = [
+    marker,
+    ...placeRecord.tracks.filter(item => item.id !== id)
+  ];
+  state.visitedPlaces[place.name] = placeRecord;
+
   state.playedLocations = state.playedLocations.slice(0, 8);
-  renderPlayedSongMarkers();
+  saveListeningMemory();
+  if (state.kakaoMapReady) renderKakaoMap();
+  else renderFallbackMapLayer();
 }
 
-function positionPlayedMarker(marker) {
+function positionMapMarker(marker) {
   const bounds = {
     minLat: 37.2404,
     maxLat: 37.2445,
@@ -507,53 +812,43 @@ function positionPlayedMarker(marker) {
   };
 }
 
-function renderPlayedSongLayer() {
+function renderFallbackMapLayer() {
   if (!playedSongLayer) return;
   playedSongLayer.innerHTML = "";
 
-  state.playedLocations.forEach((marker) => {
+  const user = mapUserLocation();
+  const userPos = positionMapMarker(user);
+  const userMarker = document.createElement("div");
+  userMarker.className = `fallback-user-marker${state.userLocation ? " live" : ""}`;
+  userMarker.style.left = userPos.left;
+  userMarker.style.top = userPos.top;
+  userMarker.innerHTML = `
+    <span></span>
+    <strong>${state.userLocation ? "내 위치" : "데모 위치"}</strong>
+  `;
+  playedSongLayer.appendChild(userMarker);
+
+  Object.values(state.visitedPlaces).forEach((place) => {
+    const pos = positionMapMarker(place);
+    const latest = place.tracks[0];
     const button = document.createElement("button");
-    button.className = "played-song-marker";
-    button.setAttribute("aria-label", `${marker.title} 재생 시작 위치`);
-    const pos = positionPlayedMarker(marker);
+    button.className = "nearby-song-marker visited";
+    button.setAttribute("aria-label", `${place.name}에서 들었던 음악`);
     button.style.left = pos.left;
     button.style.top = pos.top;
     button.innerHTML = `
       <span>♪</span>
-      <strong>${marker.title}</strong>
+      <strong>${place.name}</strong>
+      <small>${place.tracks.length}곡</small>
     `;
-    button.addEventListener("click", () => {
-      const index = state.tracks.findIndex(track => trackKey(track) === marker.id);
-      if (index >= 0) selectTrack(index, "track");
-    });
+    button.addEventListener("click", () => openMapPlacePanel(place.name));
     playedSongLayer.appendChild(button);
   });
+
 }
 
 function renderPlayedSongMarkers() {
-  clearKakaoMarkers();
-
-  if (state.kakaoMapReady && window.kakao?.maps && state.kakaoMap) {
-    const kakao = window.kakao;
-    state.playedLocations.forEach((marker) => {
-      const position = new kakao.maps.LatLng(marker.lat, marker.lng);
-      const content = `
-        <div class="kakao-played-marker">
-          <span>♪</span>
-          <strong>${escapeHtml(marker.title)}</strong>
-        </div>
-      `;
-      const mapMarker = new kakao.maps.CustomOverlay({
-        map: state.kakaoMap,
-        position,
-        content,
-        yAnchor: 1.1
-      });
-      state.kakaoMarkers.push(mapMarker);
-    });
-  }
-
-  renderPlayedSongLayer();
+  renderFallbackMapLayer();
 }
 
 function stopSimulatedPlayback() {
@@ -561,6 +856,7 @@ function stopSimulatedPlayback() {
     window.clearInterval(state.simulatedTimer);
     state.simulatedTimer = null;
   }
+  updatePlayButtonState();
 }
 
 async function awardListenCoins(track = currentTrack(), percent = 72) {
@@ -598,18 +894,32 @@ async function awardListenCoins(track = currentTrack(), percent = 72) {
   return true;
 }
 
+function updatePlayButtonState() {
+  const button = document.querySelector("#playButton");
+  if (!button) return;
+  const isActiveAudio = playingIndex === state.activeTrack && !trackAudio.paused;
+  const isSimulated = !!state.simulatedTimer;
+  button.textContent = (isActiveAudio || isSimulated) ? "⏸ 일시정지" : "▶ 재생";
+}
+
 function startSimulatedPlayback(track = currentTrack()) {
   stopSimulatedPlayback();
   addPlayHistory(track);
-  let percent = 0;
+  state.simulatedProgress = 0;
+  const duration = 180;
   passText.textContent = "재생 중";
+  updatePlayerTime(0, duration);
+  updatePlayButtonState();
   state.simulatedTimer = window.setInterval(() => {
-    percent += 7;
+    state.simulatedProgress += 7;
+    const percent = state.simulatedProgress;
+    updatePlayerTime(Math.min(duration, Math.round((percent / 100) * duration)), duration);
     if (listenProgress) listenProgress.style.width = `${Math.min(percent, 100)}%`;
     if (percent >= 70) awardListenCoins(track, percent);
     if (percent >= 100) {
       stopSimulatedPlayback();
       passText.textContent = "재생 완료";
+      updatePlayButtonState();
     }
   }, 350);
 }
@@ -617,6 +927,12 @@ function startSimulatedPlayback(track = currentTrack()) {
 function playCurrentTrack() {
   if (!state.unlocked) state.unlocked = true;
   const track = currentTrack();
+  if (state.simulatedTimer) {
+    stopSimulatedPlayback();
+    passText.textContent = "일시정지됨";
+    updatePlayButtonState();
+    return;
+  }
   if (track.audio) {
     playTrack(state.activeTrack);
     return;
@@ -644,15 +960,24 @@ function playTrack(index) {
     api("POST", "/api/play", { userId: USER_ID, trackTitle: track.title, artist: track.artist });
   }
   renderTrackGrid();
+  updatePlayButtonState();
 }
 
-trackAudio.addEventListener("pause", () => renderTrackGrid());
-trackAudio.addEventListener("play", () => renderTrackGrid());
+trackAudio.addEventListener("pause", () => {
+  renderTrackGrid();
+  updatePlayButtonState();
+});
+trackAudio.addEventListener("play", () => {
+  renderTrackGrid();
+  updatePlayButtonState();
+  updatePlayerTime(trackAudio.currentTime, trackAudio.duration);
+});
 trackAudio.addEventListener("timeupdate", () => {
   if (playingIndex === null || !Number.isFinite(trackAudio.duration) || trackAudio.duration <= 0) return;
   const percent = Math.min(100, Math.round((trackAudio.currentTime / trackAudio.duration) * 100));
   if (playingIndex === state.activeTrack && listenProgress) {
     listenProgress.style.width = `${percent}%`;
+    updatePlayerTime(trackAudio.currentTime, trackAudio.duration);
   }
   if (percent >= 70) awardListenCoins(state.tracks[playingIndex], percent);
 });
@@ -707,6 +1032,7 @@ async function loadJamendoTracks() {
     state.reviewed = false;
     syncListenStateForActiveTrack();
     if (apiStatus) apiStatus.textContent = `${state.tracks.length}개 트랙 불러옴`;
+    seedDemoSongsAtCurrentLocation();
     renderAll();
     await applyRecommendScores();
     applyAiReasons();
@@ -781,6 +1107,15 @@ document.querySelector("#playButton")?.addEventListener("click", () => {
   playCurrentTrack();
 });
 
+document.querySelector("#closeMapPlacePanel")?.addEventListener("click", closeMapPlacePanel);
+
+document.addEventListener("click", (event) => {
+  const marker = event.target.closest(".kakao-track-marker.visited");
+  if (!marker) return;
+  const place = marker.dataset.place;
+  if (place) openMapPlacePanel(place);
+});
+
 document.querySelectorAll("#ratingStars button").forEach((button) => {
   button.addEventListener("click", async () => {
     const rating = Number(button.dataset.rating);
@@ -812,6 +1147,12 @@ document.querySelectorAll("#ratingStars button").forEach((button) => {
       ratingResult.textContent = `${rating}점으로 업데이트했습니다.`;
     }
 
+    const id = trackKey(track);
+    state.heardTracks = state.heardTracks.map(item =>
+      item.id === id ? { ...item, rating } : item
+    );
+    saveListeningMemory();
+    renderHeardTrackList();
     updateKeys();
     updateMetrics();
   });
@@ -830,6 +1171,8 @@ document.querySelector("#merchButton")?.addEventListener("click", async () => {
   walletMessage.textContent = "굿즈 구매가 완료되었습니다. 데모에서는 주문 예약 상태로 표시됩니다.";
 });
 
+resetListeningMemoryForDemo();
+seedDemoSongsAtCurrentLocation();
 renderMapMarkers();
 renderAll();
 
@@ -905,8 +1248,9 @@ const placeTriggered = new Set();
 function checkPlaceProximity(lat, lng) {
   for (const p of PLACES) {
     const d = haversineMeters(lat, lng, p.lat, p.lng);
-    if (d < 60 && !placeTriggered.has(p.name)) {
-      placeTriggered.add(p.name);
+    const lastPrompt = state.promptedPlaces[p.name] || 0;
+    if (d < 60 && Date.now() - lastPrompt > 45000) {
+      state.promptedPlaces[p.name] = Date.now();
       triggerPlaceVibe(p.name);
       break;
     }
@@ -921,28 +1265,52 @@ function haversineMeters(lat1, lng1, lat2, lng2) {
 }
 
 async function triggerPlaceVibe(placeName) {
+  const fallbackTrack = chooseTrackForPlace(placeName);
   const data = await api("POST", "/api/place-vibe", { userId: USER_ID, place: placeName, tracks: state.tracks });
-  if (!data?.track) return;
-  showPlaceVibeBanner(placeName, data.vibe, data.reason, data.track);
+  const track = data?.track || fallbackTrack;
+  if (!track) return;
+  showPlaceVibeBanner(placeName, data?.vibe, data?.reason, track);
+}
+
+function chooseTrackForPlace(placeName) {
+  const place = PLACES.find(item => item.name === placeName);
+  const heardIds = new Set(state.heardTracks.map(item => item.id));
+  const candidates = state.tracks
+    .map((track, index) => {
+      const coords = coordsForTrack(track, index);
+      const distance = place ? getDistanceMeters(place.lat, place.lng, coords.lat, coords.lng) : 0;
+      return { track, distance, heard: heardIds.has(trackKey(track)) };
+    })
+    .sort((a, b) => Number(a.heard) - Number(b.heard) || a.distance - b.distance);
+  return candidates[0]?.track || currentTrack();
 }
 
 function showPlaceVibeBanner(place, vibe, reason, track) {
   const old = document.querySelector(".nearby-recommend-popup");
   if (old) old.remove();
+  const visited = state.visitedPlaces[place];
+  const subcopy = visited
+    ? `${place}에서 이미 ${visited.tracks.length}곡을 들었어요. 이번에는 다른 곡을 추천할게요.`
+    : `${place} 분위기와 취향을 보고 고른 곡이에요.`;
   const banner = document.createElement("div");
   banner.className = "nearby-recommend-popup";
   banner.innerHTML = `
     <div class="nrp-card">
       <button class="nrp-close" aria-label="닫기">×</button>
-      <span class="nrp-kicker">근처 도착</span>
+      <span class="nrp-kicker">음악 구역 도착</span>
       <strong>${track.title}</strong>
-      <p>${place} · ${vibe || reason || "지금 위치에 어울리는 인디 음악"}</p>
-      <button class="nrp-play">▶ 지금 듣기</button>
+      <p>${subcopy}</p>
+      <small>${vibe || reason || recommendationReason(track)}</small>
+      <div class="nrp-actions">
+        <button class="nrp-skip">나중에</button>
+        <button class="nrp-play">▶ 재생</button>
+      </div>
     </div>
   `;
   document.body.appendChild(banner);
   requestAnimationFrame(() => banner.classList.add("show"));
   banner.querySelector(".nrp-close").addEventListener("click", () => banner.remove());
+  banner.querySelector(".nrp-skip").addEventListener("click", () => banner.remove());
   banner.querySelector(".nrp-play").addEventListener("click", () => {
     const idx = state.tracks.findIndex(t => t.title === track.title);
     if (idx >= 0) {

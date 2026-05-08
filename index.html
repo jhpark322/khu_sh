@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Where Indi</title>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=14">
     <meta http-equiv="Cache-Control" content="no-store">
     <meta http-equiv="Pragma" content="no-cache">
   </head>
@@ -23,30 +23,30 @@
     <div class="onboarding-overlay" id="onboardingOverlay">
       <div class="onboarding-sheet">
         <div class="onboarding-logo">WI</div>
-        <h2>어떤 음악을 좋아하세요?</h2>
-        <p class="onboarding-sub">취향을 알면 동선 위에서 딱 맞는 인디 음악을 찾아드려요</p>
+        <h2>어떤 음악을 자주 들어요?</h2>
+        <p class="onboarding-sub">장르와 분위기를 고르면 지금 위치에 어울리는 곡을 골라드려요</p>
 
         <div class="onboarding-section">
           <p class="field-label">장르</p>
           <div class="onboarding-tags" id="genreTags">
             <button class="otag active" data-value="indie">indie</button>
+            <button class="otag" data-value="band">band</button>
             <button class="otag" data-value="acoustic">acoustic</button>
-            <button class="otag" data-value="lofi">lofi</button>
-            <button class="otag" data-value="ambient">ambient</button>
+            <button class="otag" data-value="lofi">lo-fi</button>
             <button class="otag" data-value="folk">folk</button>
-            <button class="otag" data-value="jazz">jazz</button>
+            <button class="otag" data-value="electronic">electronic</button>
           </div>
         </div>
 
         <div class="onboarding-section">
           <p class="field-label">분위기</p>
           <div class="onboarding-tags" id="moodTags">
-            <button class="otag active" data-value="잔잔함">잔잔함</button>
-            <button class="otag" data-value="밤">밤 산책</button>
-            <button class="otag" data-value="청춘">청춘</button>
-            <button class="otag" data-value="로파이">로파이</button>
-            <button class="otag" data-value="감성">감성</button>
-            <button class="otag" data-value="활기">활기</button>
+            <button class="otag active" data-value="calm">차분한</button>
+            <button class="otag" data-value="walk">산책할 때</button>
+            <button class="otag" data-value="focus">집중할 때</button>
+            <button class="otag" data-value="night">밤 감성</button>
+            <button class="otag" data-value="bright">밝은</button>
+            <button class="otag" data-value="live">라이브감</button>
           </div>
         </div>
 
@@ -145,6 +145,17 @@
               <span class="geo-dot"></span>
               <span id="geoStatusText">위치 확인 중...</span>
             </div>
+
+            <section class="map-place-panel" id="mapPlacePanel" aria-label="장소별 음악 목록">
+              <div class="map-place-panel-head">
+                <div>
+                  <span>PLAYLIST HERE</span>
+                  <strong id="mapPlaceTitle">내 위치 데모 구역</strong>
+                </div>
+                <button id="closeMapPlacePanel" aria-label="닫기">×</button>
+              </div>
+              <div class="map-place-track-list" id="mapPlaceTrackList"></div>
+            </section>
           </div>
 
           <!-- Bottom track card -->
@@ -190,6 +201,10 @@
             <div class="listen-bar">
               <span id="listenProgress"></span>
             </div>
+            <div class="player-time-row">
+              <span id="currentTimeText">0:00</span>
+              <span id="durationText">0:00</span>
+            </div>
 
             <!-- Action button -->
             <button class="primary-button listen-action-btn" id="playButton">▶ 노래 재생</button>
@@ -206,6 +221,9 @@
               <button data-rating="5" aria-label="5점">★</button>
             </div>
             <p class="status-text" id="ratingResult">별점을 남기면 다음 추천에 반영됩니다.</p>
+            <div class="heard-track-list" id="heardTrackList">
+              <p class="status-text">아직 들었던 노래가 없습니다.</p>
+            </div>
           </article>
 
         </section>
@@ -331,6 +349,6 @@
     </div><!-- /.phone-app -->
 
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=dc140cc7273dca9367e4384de951ff75"></script>
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=22"></script>
   </body>
 </html>
