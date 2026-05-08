@@ -4,9 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Where Indi</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=15">
+    <meta http-equiv="Cache-Control" content="no-store">
+    <meta http-equiv="Pragma" content="no-cache">
   </head>
   <body>
+
+    <!-- ── Splash ───────────────────────────────────────────────────── -->
     <div class="splash-screen" id="splashScreen" aria-label="Where Indi 시작 화면">
       <div class="splash-content">
         <div class="splash-logo">WI</div>
@@ -15,142 +19,116 @@
       </div>
     </div>
 
+    <!-- ── Onboarding overlay ───────────────────────────────────────── -->
+    <div class="onboarding-overlay" id="onboardingOverlay">
+      <div class="onboarding-sheet">
+        <div class="onboarding-logo">WI</div>
+        <h2>어떤 음악을 자주 들어요?</h2>
+        <p class="onboarding-sub">장르와 분위기를 고르면 지금 위치에 어울리는 곡을 골라드려요</p>
+
+        <div class="onboarding-section">
+          <p class="field-label">장르</p>
+          <div class="onboarding-tags" id="genreTags">
+            <button class="otag active" data-value="indie">indie</button>
+            <button class="otag" data-value="band">band</button>
+            <button class="otag" data-value="acoustic">acoustic</button>
+            <button class="otag" data-value="lofi">lo-fi</button>
+            <button class="otag" data-value="folk">folk</button>
+            <button class="otag" data-value="electronic">electronic</button>
+          </div>
+        </div>
+
+        <div class="onboarding-section">
+          <p class="field-label">분위기</p>
+          <div class="onboarding-tags" id="moodTags">
+            <button class="otag active" data-value="calm">차분한</button>
+            <button class="otag" data-value="walk">산책할 때</button>
+            <button class="otag" data-value="focus">집중할 때</button>
+            <button class="otag" data-value="night">밤 감성</button>
+            <button class="otag" data-value="bright">밝은</button>
+            <button class="otag" data-value="live">라이브감</button>
+          </div>
+        </div>
+
+        <button class="primary-button onboarding-cta" id="onboardingDone">시작하기</button>
+      </div>
+    </div>
+
+    <!-- ── Phone shell ──────────────────────────────────────────────── -->
     <div class="phone-app">
-      <header class="topbar">
-        <button class="avatar-button" data-view-jump="home" aria-label="홈으로 이동">WI</button>
-        <div>
-          <p class="eyebrow">Where Indi</p>
-          <strong class="screen-title">내 주변 인디 믹스</strong>
-        </div>
-        <div class="wallet-pill">
-          <span>Points</span>
-          <strong id="keyBalance">25K</strong>
-        </div>
-      </header>
 
       <main class="app-shell">
+
+        <!-- ══ HOME ══════════════════════════════════════════════════ -->
         <section id="home" class="view active">
-          <section class="hero-card">
-            <div class="hero-copy">
-              <p class="eyebrow">Playing near you</p>
-              <h1>지금 근처에서 들을 수 있는 인디 음악</h1>
-              <p class="hero-lead">장소, 시간, 취향을 섞어 오늘 걸음에 맞는 플레이리스트를 만듭니다.</p>
-            </div>
-            <img id="heroCover" alt="추천 트랙 커버" src="">
-            <div class="hero-player">
-              <div>
-                <strong id="heroTrackTitle">밤 산책</strong>
-                <span id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</span>
+
+          <div class="hero-section">
+            <div class="home-topbar">
+              <div class="brand-lockup">
+                <div class="brand-logo">WI</div>
+                <div>
+                  <span class="app-wordmark">WHERE INDI</span>
+                  <h1>내 주변 인디 믹스</h1>
+                </div>
               </div>
-              <button class="round-button" data-view-jump="track" aria-label="재생 화면 열기">▶</button>
+              <div class="wallet-pill">
+                <span>IndiCoin</span>
+                <strong id="keyBalance">25 IC</strong>
+              </div>
             </div>
-          </section>
 
-          <section class="quick-grid" aria-label="빠른 실행">
-            <button data-view-jump="discover">
-              <span>오늘의 믹스</span>
-              <strong>Jamendo</strong>
-            </button>
-            <button data-view-jump="map">
-              <span>가까운 음악</span>
-              <strong>30m</strong>
-            </button>
-            <button data-view-jump="wallet">
-              <span>내 보관함</span>
-              <strong>25K</strong>
-            </button>
-            <button data-view-jump="creator">
-              <span>아티스트</span>
-              <strong>Stats</strong>
-            </button>
-          </section>
+            <article class="home-hero-card">
+              <div class="home-hero-copy">
+                <p class="hero-tag-line">PLAYING NEAR YOU</p>
+                <h2>지금 근처에서 들을 수 있는 인디 음악</h2>
+                <p>장소, 시간, 취향을 섞어 오늘 걸음에 맞는 플레이리스트를 만듭니다.</p>
+              </div>
 
-          <section class="content-block">
-            <div class="section-row">
-              <h2>Made for your walk</h2>
-              <button class="text-button" data-view-jump="discover">전체 보기</button>
-            </div>
-            <div class="mix-list">
-              <article class="mix-item">
-                <img alt="밤 산책 커버" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80">
-                <div>
-                  <strong>정문 앞 카페 믹스</strong>
-                  <span>잔잔한 보컬, 늦은 밤 산책</span>
+              <div class="home-now-card">
+                <img id="homeNowCover" class="home-now-cover" alt="추천 앨범 커버" src="">
+                <div class="home-now-copy">
+                  <strong id="heroTrackTitle">밤 산책</strong>
+                  <span id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</span>
+                  <small id="heroReason">자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다.</small>
                 </div>
-              </article>
-              <article class="mix-item">
-                <img alt="여름의 계단 커버" src="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=500&q=80">
-                <div>
-                  <strong>중앙광장 밴드 사운드</strong>
-                  <span>청춘, 캠퍼스, 기타 톤</span>
-                </div>
-              </article>
-            </div>
-          </section>
+                <button class="home-now-play" data-view-jump="track" aria-label="재생 화면 열기">▶</button>
+              </div>
+            </article>
+          </div>
 
-          <section class="home-strip" aria-label="Where Indi 핵심 지표">
-            <article class="strip-item">
-              <strong>87</strong>
-              <span>매치</span>
-            </article>
-            <article class="strip-item">
-              <strong>30m</strong>
-              <span>근처</span>
-            </article>
-            <article class="strip-item">
-              <strong>24h</strong>
-              <span>다시 듣기</span>
-            </article>
-          </section>
         </section>
 
+        <!-- ══ DISCOVER ══════════════════════════════════════════════ -->
         <section id="discover" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Search</p>
-            <h2>실제 인디 트랙으로 믹스 만들기</h2>
+
+          <div class="view-header">
+            <p class="view-eyebrow">Discover</p>
+            <h2 class="view-title">내 취향 트랙</h2>
           </div>
 
-          <section class="api-panel">
-            <label class="field-label" for="jamendoClientId">Jamendo client_id</label>
-            <div class="inline-form">
-              <input id="jamendoClientId" type="text" autocomplete="off" placeholder="developer.jamendo.com에서 발급">
-              <button class="primary-button compact" id="loadJamendo">불러오기</button>
-            </div>
-            <div class="filter-row" aria-label="음악 분위기 선택">
-              <button class="filter-chip active" data-tag="indie">indie</button>
-              <button class="filter-chip" data-tag="acoustic">acoustic</button>
-              <button class="filter-chip" data-tag="lofi">lofi</button>
-              <button class="filter-chip" data-tag="ambient">ambient</button>
-            </div>
-            <p class="status-text" id="apiStatus">client_id가 없으면 내장 데모 트랙으로 작동합니다.</p>
-          </section>
+          <!-- Genre filter chips -->
+          <div class="filter-row" aria-label="장르 필터">
+            <button class="filter-chip active" data-tag="indie">indie</button>
+            <button class="filter-chip" data-tag="acoustic">acoustic</button>
+            <button class="filter-chip" data-tag="lofi">lofi</button>
+            <button class="filter-chip" data-tag="ambient">ambient</button>
+          </div>
 
-          <section class="content-block">
-            <div class="section-row">
-              <h2>Tracks nearby</h2>
-              <span class="quiet-label">tap to locate</span>
-            </div>
-            <div class="track-grid" id="trackGrid" aria-label="불러온 인디 트랙"></div>
-          </section>
+          <p class="status-text" id="apiStatus"></p>
+
+          <!-- Track list -->
+          <div class="track-grid" id="trackGrid" aria-label="인디 트랙 목록"></div>
+
         </section>
 
-        <section id="map" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Map</p>
-            <h2>내 주변에서 바로 듣기</h2>
-          </div>
+        <!-- ══ MAP ══════════════════════════════════════════════════ -->
+        <section id="map" class="view map-view">
 
-          <section class="map-api-panel">
-            <label class="field-label" for="kakaoMapKey">Kakao JavaScript key</label>
-            <div class="inline-form">
-              <input id="kakaoMapKey" type="password" autocomplete="off" placeholder="Kakao Developers JavaScript 키">
-              <button class="primary-button compact" id="loadKakaoMap">지도 연결</button>
-            </div>
-            <p class="status-text" id="kakaoMapStatus">키를 넣으면 실제 카카오맵으로 전환됩니다. 없으면 데모 지도로 계속 작동합니다.</p>
-          </section>
-
-          <div class="map-canvas" aria-label="근처 음악 지도">
+          <!-- Full-screen map area -->
+          <div class="map-full" aria-label="근처 음악 지도">
             <div id="kakaoMap" class="kakao-map" aria-label="카카오 지도"></div>
+            <div class="played-song-layer" id="playedSongLayer" aria-label="재생 시작 위치"></div>
+
             <svg class="map-fallback" viewBox="0 0 720 460" role="img" aria-label="경희대 주변 인디 음악 지도">
               <rect class="map-bg" x="0" y="0" width="720" height="460"></rect>
               <path class="road main" d="M42 334 C156 252 248 294 348 218 S558 158 682 90"></path>
@@ -158,114 +136,167 @@
               <path class="road foot" d="M52 116 C170 156 202 96 318 128 S520 76 640 132"></path>
               <path class="route-path" d="M86 350 C180 300 252 306 346 230 S520 176 620 126"></path>
               <circle class="user-dot" id="userDot" cx="520" cy="170" r="10"></circle>
-              <g class="drop-marker selected" data-drop-index="0">
-                <circle cx="550" cy="150" r="22"></circle>
-                <text x="550" y="157">♪</text>
-              </g>
-              <g class="drop-marker" data-drop-index="1">
-                <circle cx="338" cy="230" r="20"></circle>
-                <text x="338" y="237">♪</text>
-              </g>
-              <g class="drop-marker" data-drop-index="2">
-                <circle cx="190" cy="306" r="20"></circle>
-                <text x="190" y="313">♪</text>
-              </g>
               <text class="place-label" x="500" y="116">정문 앞 카페</text>
               <text class="place-label" x="286" y="204">중앙광장</text>
               <text class="place-label" x="142" y="280">독립서점</text>
             </svg>
+
+            <!-- GPS status pill -->
+            <div class="geo-pill" id="geoStatus">
+              <span class="geo-dot"></span>
+              <span id="geoStatusText">위치 확인 중...</span>
+            </div>
+
+            <section class="map-place-panel" id="mapPlacePanel" aria-label="장소별 음악 목록">
+              <div class="map-place-panel-head">
+                <div>
+                  <span>PLAYLIST HERE</span>
+                  <strong id="mapPlaceTitle">내 위치 데모 구역</strong>
+                </div>
+                <button id="closeMapPlacePanel" aria-label="닫기">×</button>
+              </div>
+              <div class="map-place-track-list" id="mapPlaceTrackList"></div>
+            </section>
           </div>
 
+          <!-- Bottom track card -->
           <article class="drop-card">
             <img id="dropCover" alt="선택된 트랙 커버" src="">
-            <div>
-              <p class="eyebrow">Near You</p>
-              <h3 id="dropTitle">밤 산책</h3>
-              <p id="dropMeta">Blue Room · 정문 앞 카페 · 18m</p>
-              <div class="progress-track"><span id="distanceBar"></span></div>
-              <p class="status-text" id="unlockStatus">지금 재생 가능: 가까운 위치입니다.</p>
+            <div class="drop-card-info">
+              <strong id="dropTitle">밤 산책</strong>
+              <span id="dropMeta">Blue Room · 정문 앞 카페</span>
+              <span class="drop-distance" id="unlockStatus">18m</span>
             </div>
-            <button class="primary-button" id="unlockButton">근처에서 듣기</button>
-            <button class="ghost-button" id="moveCloserButton">내 위치 맞추기</button>
+            <button class="primary-button" id="unlockButton">듣기</button>
           </article>
+
+          <section class="play-history-panel">
+            <h3>재생된 음악 기록</h3>
+            <div class="play-history-list" id="playHistoryList">
+              <p class="status-text">아직 재생한 음악이 없습니다.</p>
+            </div>
+          </section>
+
         </section>
 
+        <!-- ══ TRACK / PLAYER ════════════════════════════════════════ -->
         <section id="track" class="view">
-          <section class="now-playing-screen">
-            <img id="playerCover" alt="재생 중인 트랙 커버" src="">
-            <p class="eyebrow" id="playerArtist">Blue Room</p>
-            <h2 id="playerHeading">밤 산책</h2>
-            <p id="passText">근처 음악을 선택하면 바로 재생할 수 있어요.</p>
-            <audio id="audioPlayer" controls preload="none"></audio>
-            <div class="listen-bar"><span id="listenProgress"></span></div>
-            <button class="primary-button" id="listenButton">72%까지 듣기</button>
-          </section>
 
-          <article class="review-panel">
-            <h3>취향 피드백</h3>
-            <div class="segmented">
-              <button class="segment active" data-feedback="recommend">추천</button>
-              <button class="segment" data-feedback="not-recommend">취향 아님</button>
+          <div class="now-playing-screen">
+            <!-- Album art -->
+            <div class="player-cover-wrap">
+              <img id="playerCover" alt="재생 중인 트랙 커버" src="">
             </div>
-            <div class="tag-row selectable">
-              <button>장소와 잘 어울림</button>
-              <button>다시 듣고 싶음</button>
-              <button>밤 산책 감성</button>
+
+            <!-- Track info -->
+            <p class="player-eyebrow" id="playerArtist">Blue Room</p>
+            <h2 class="player-title" id="playerHeading">밤 산책</h2>
+            <!-- playerTitle: alias used by renderSelectedTrack, kept hidden -->
+            <span id="playerTitle" style="display:none" aria-hidden="true"></span>
+            <p class="player-pass-text" id="passText">근처 음악을 선택하면 바로 재생할 수 있어요.</p>
+
+            <!-- Hidden audio element (JS controls playback) -->
+            <audio id="audioPlayer" preload="none" style="display:none"></audio>
+
+            <!-- Progress bar -->
+            <div class="listen-bar">
+              <span id="listenProgress"></span>
             </div>
-            <textarea id="reviewText">밤에 카페 앞에서 듣기 좋은 잔잔한 곡이었습니다. 보컬이 담담해서 과하지 않았고, 이 장소의 분위기와 잘 맞았습니다. 친구에게도 추천하고 싶지만 후반부 전개는 조금 단조롭게 느껴졌습니다.</textarea>
-            <button class="ghost-button" id="submitReview">리뷰 제출</button>
-            <p class="status-text" id="reviewResult">70% 이상 들으면 취향 포인트가 쌓입니다.</p>
+            <div class="player-time-row">
+              <span id="currentTimeText">0:00</span>
+              <span id="durationText">0:00</span>
+            </div>
+
+            <!-- Action button -->
+            <button class="primary-button listen-action-btn" id="playButton">▶ 노래 재생</button>
+          </div>
+
+          <!-- Rating panel -->
+          <article class="rating-panel">
+            <h3>별점 피드백</h3>
+            <div class="star-row" id="ratingStars" aria-label="별점 선택">
+              <button data-rating="1" aria-label="1점">★</button>
+              <button data-rating="2" aria-label="2점">★</button>
+              <button data-rating="3" aria-label="3점">★</button>
+              <button data-rating="4" aria-label="4점">★</button>
+              <button data-rating="5" aria-label="5점">★</button>
+            </div>
+            <p class="status-text" id="ratingResult">별점을 남기면 다음 추천에 반영됩니다.</p>
+            <div class="heard-track-list" id="heardTrackList">
+              <p class="status-text">아직 들었던 노래가 없습니다.</p>
+            </div>
           </article>
+
         </section>
 
+        <!-- ══ INDICOIN ══════════════════════════════════════════════ -->
         <section id="wallet" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Your Library</p>
-            <h2>저장한 음악</h2>
+
+          <div class="view-header">
+            <p class="view-eyebrow">IndiCoin</p>
+            <h2 class="view-title">인디코인</h2>
           </div>
 
-          <article class="library-card">
-            <div>
-              <span>Indi Points</span>
-              <strong>오늘 취향 포인트를 모아 공연 혜택으로 연결</strong>
+          <!-- Coin card -->
+          <div class="points-card">
+            <div class="points-card-top">
+              <span class="points-label">Coin Balance</span>
+              <strong class="points-value" id="keyBalance2"></strong>
             </div>
-            <button class="text-button" data-view-jump="creator">아티스트 통계</button>
-          </article>
+            <p class="points-sub">음악 감상과 별점으로 모아 굿즈 구매나 아티스트 후원에 쓰는 인디코인</p>
+          </div>
 
+          <!-- Reward actions -->
           <section class="reward-panel">
-            <h3>내 음악 혜택</h3>
-            <button class="reward-item" id="spendHint">
-              <span>다음 추천 보기</span>
-              <strong>10K</strong>
+            <h3>코인 샵</h3>
+            <button class="reward-item" id="donateButton">
+              <div class="reward-item-left">
+                <span class="reward-icon">♡</span>
+                <span>아티스트 Donate</span>
+              </div>
+              <strong class="reward-cost">50 IC</strong>
             </button>
-            <button class="reward-item" id="applyDiscount">
-              <span>공연 할인 적용</span>
-              <strong>100K</strong>
+            <button class="reward-item" id="merchButton">
+              <div class="reward-item-left">
+                <span class="reward-icon">▣</span>
+                <span>굿즈 구매</span>
+              </div>
+              <strong class="reward-cost">120 IC</strong>
             </button>
-            <p class="status-text" id="walletMessage">추천을 열거나 예약 할인 시뮬레이션을 확인하세요.</p>
+            <p class="status-text" id="walletMessage">인디코인은 좋아하는 아티스트 후원과 굿즈 구매에 사용할 수 있어요.</p>
           </section>
 
-          <article class="ticket">
-            <p class="eyebrow">Booking</p>
-            <h3>Blue Room 소극장 라이브</h3>
-            <div class="price-row"><span>원가</span><strong>15,000원</strong></div>
-            <div class="price-row"><span>할인</span><strong id="discountValue">0원</strong></div>
-            <div class="price-row total"><span>최종가</span><strong id="finalPrice">15,000원</strong></div>
-          </article>
         </section>
 
+        <!-- ══ CREATOR ════════════════════════════════════════════════ -->
         <section id="creator" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Creator</p>
-            <h2>장소별 반응</h2>
+
+          <div class="view-header">
+            <p class="view-eyebrow">Creator</p>
+            <h2 class="view-title">장소별 반응</h2>
           </div>
 
+          <!-- 2×2 metric grid -->
           <div class="dashboard-grid">
-            <article class="metric"><span>discoveries</span><strong id="metricDiscoveries">120</strong></article>
-            <article class="metric"><span>plays</span><strong id="metricUnlocks">86</strong></article>
-            <article class="metric"><span>reviews</span><strong id="metricReviews">28</strong></article>
-            <article class="metric"><span>booking clicks</span><strong id="metricBookings">9</strong></article>
+            <article class="metric">
+              <span>discoveries</span>
+              <strong id="metricDiscoveries">120</strong>
+            </article>
+            <article class="metric">
+              <span>plays</span>
+              <strong id="metricUnlocks">86</strong>
+            </article>
+            <article class="metric">
+              <span>reviews</span>
+              <strong id="metricReviews">28</strong>
+            </article>
+            <article class="metric">
+              <span>support clicks</span>
+              <strong id="metricSupport">9</strong>
+            </article>
           </div>
+
+          <!-- Keyword tags + bar chart -->
           <article class="insight-panel">
             <h3>반응 키워드</h3>
             <div class="tag-row">
@@ -281,27 +312,44 @@
               <div style="height: 64%"><span>카페</span></div>
             </div>
           </article>
+
         </section>
+
       </main>
 
+      <!-- ── Mini player (above bottom nav) ──────────────────────── -->
       <aside class="mini-player" data-view-jump="track" aria-label="미니 플레이어">
         <img id="miniCover" alt="현재 트랙 커버" src="">
-        <div>
+        <div class="mini-info">
           <strong id="miniTitle">밤 산책</strong>
           <span id="miniArtist">Blue Room</span>
         </div>
         <button class="mini-play" aria-label="재생 화면 열기">▶</button>
       </aside>
 
+      <!-- ── Bottom nav ────────────────────────────────────────────── -->
       <nav class="bottom-nav" aria-label="앱 탭">
-        <button class="nav-button active" data-view="home"><span>⌂</span>홈</button>
-        <button class="nav-button" data-view="discover"><span>⌕</span>검색</button>
-        <button class="nav-button" data-view="map"><span>◎</span>지도</button>
-        <button class="nav-button" data-view="track"><span>♪</span>재생</button>
-        <button class="nav-button" data-view="wallet"><span>▣</span>보관함</button>
+        <button class="nav-button active" data-view="home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+          <span>홈</span>
+        </button>
+        <button class="nav-button" data-view="map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <span>지도</span>
+        </button>
+        <button class="nav-button" data-view="track">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+          <span>재생</span>
+        </button>
+        <button class="nav-button" data-view="wallet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><circle cx="12" cy="14" r="2" fill="currentColor" stroke="none"/></svg>
+          <span>인디코인</span>
+        </button>
       </nav>
-    </div>
 
-    <script src="app.js"></script>
+    </div><!-- /.phone-app -->
+
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=dc140cc7273dca9367e4384de951ff75"></script>
+    <script src="app.js?v=29"></script>
   </body>
 </html>
