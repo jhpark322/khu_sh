@@ -328,25 +328,37 @@ function startGeolocation() {
   }
   setGeoPill("위치 확인 중...", false);
 
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      updateRealDistances();
-      renderSelectedTrack();
-      renderTrackGrid();
-      if (state.kakaoMapReady) renderKakaoMap();
-      setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
-      checkPlaceProximity(state.userLocation.lat, state.userLocation.lng);
-    },
-    err => {
-      const msg = err.code === 1 ? "위치 권한 거부됨"
-                : err.code === 2 ? "위치 신호 없음"
-                : err.code === 3 ? "위치 확인 시간 초과"
-                : "위치 확인 실패";
-      setGeoPill(msg, false);
-      console.warn("Geolocation error:", err);
-    },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  function onSuccess(pos) {
+    state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    updateRealDistances();
+    renderSelectedTrack();
+    renderTrackGrid();
+    if (state.kakaoMapReady) renderKakaoMap();
+    setGeoPill(`내 위치 확인됨 · ±${Math.round(pos.coords.accuracy)}m`, true);
+    checkPlaceProximity(state.userLocation.lat, state.userLocation.lng);
+  }
+
+  // enableHighAccuracy=true 실패 시 Wi-Fi 기반 위치로 재시도
+  function onError(err) {
+    if (err.code === 2 || err.code === 3) {
+      navigator.geolocation.getCurrentPosition(onSuccess, onFinalError,
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      );
+    } else {
+      onFinalError(err);
+    }
+  }
+
+  function onFinalError(err) {
+    const msg = err.code === 1 ? "위치 권한 거부됨 — 브라우저 설정에서 허용 필요"
+              : err.code === 2 ? "위치 신호 없음"
+              : "위치 확인 실패";
+    setGeoPill(msg, false);
+    console.warn("Geolocation error:", err.code, err.message);
+  }
+
+  navigator.geolocation.getCurrentPosition(onSuccess, onError,
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
   );
 
   if (state.geoWatchId !== null) navigator.geolocation.clearWatch(state.geoWatchId);
@@ -360,7 +372,7 @@ function startGeolocation() {
       checkPlaceProximity(state.userLocation.lat, state.userLocation.lng);
     },
     () => {},
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 }
   );
 }
 
