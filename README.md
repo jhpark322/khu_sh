@@ -1,4 +1,4 @@
-# Airdrop Gallery
+# Where Indi
 
 경희대 파일럿을 상정한 위치 기반 인디뮤직 발견 앱 데모입니다.
 
@@ -27,18 +27,3 @@ Then open `http://localhost:4173`.
 4. Click `API 불러오기`.
 
 The app uses Jamendo JSONP so the static demo can call the API from the browser.
-# Airdrop Gallery
-
-Location-based indie music discovery demo inspired by the Airdrop Gallery report.
-
-Open `index.html` in a browser. No build step is required.
-
-## Demo Scope
-
-- Daily route and music mood setup
-- Contextual recommendation card
-- Map-style drop discovery and 30m unlock simulation
-- 24-hour listening pass with progress-based rewards
-- Feedback, review quality scoring, and Culture Key rewards
-- Hint unlock, booking discount simulation, and creator dashboard
-# khu_sh
