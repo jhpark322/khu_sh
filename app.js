@@ -219,8 +219,17 @@ function renderMapMarkers() {
 
 function loadKakaoMapsSdk(appKey) {
   return new Promise((resolve, reject) => {
+    const TIMEOUT_MS = 8000;
+
+    function withTimeout(fn) {
+      const timer = setTimeout(() => {
+        reject(new Error("카카오맵 응답 시간 초과 — JavaScript 키인지 확인하고, 카카오 콘솔 > 앱 > 플랫폼 > Web 에 현재 도메인(예: localhost, 127.0.0.1)을 등록했는지 확인하세요."));
+      }, TIMEOUT_MS);
+      return () => { clearTimeout(timer); fn(); };
+    }
+
     if (window.kakao?.maps) {
-      window.kakao.maps.load(resolve);
+      window.kakao.maps.load(withTimeout(resolve));
       return;
     }
 
@@ -231,8 +240,10 @@ function loadKakaoMapsSdk(appKey) {
 
     const existingScript = document.querySelector("#kakaoMapsSdk");
     if (existingScript) {
-      existingScript.addEventListener("load", () => window.kakao.maps.load(resolve), { once: true });
-      existingScript.addEventListener("error", () => reject(new Error("Kakao Maps SDK를 불러오지 못했습니다.")), { once: true });
+      existingScript.addEventListener("load", () => window.kakao?.maps
+        ? window.kakao.maps.load(withTimeout(resolve))
+        : reject(new Error("Kakao Maps SDK 초기화 실패 — JavaScript 키인지 확인하세요.")), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Kakao Maps SDK 네트워크 오류")), { once: true });
       return;
     }
 
@@ -243,10 +254,10 @@ function loadKakaoMapsSdk(appKey) {
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false`;
     script.addEventListener("load", () => {
       if (!window.kakao?.maps) {
-        reject(new Error("Kakao Maps SDK 초기화에 실패했습니다."));
+        reject(new Error("Kakao Maps SDK 초기화 실패 — JavaScript 키인지 확인하세요."));
         return;
       }
-      window.kakao.maps.load(resolve);
+      window.kakao.maps.load(withTimeout(resolve));
     });
     script.addEventListener("error", () => reject(new Error("Kakao Maps SDK를 불러오지 못했습니다.")));
     document.head.appendChild(script);
