@@ -78,9 +78,16 @@
                 </div>
               </div>
 
+              <button class="play-cta-btn home-popup-open" id="openHomePopup" aria-label="현재 추천 팝업 열기">Now Playing</button>
+            </div>
+          </div>
+
+          <div class="home-popup" id="homeTrackPopup" aria-hidden="true">
+            <div class="home-popup-card">
+              <button class="popup-close" id="homePopupClose" aria-label="팝업 닫기">×</button>
               <div class="hero-card">
                 <div class="hero-card-cover-wrap">
-                  <img class="hero-card-cover" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80" alt="현재 트랙 커버">
+                  <img class="hero-card-cover" id="heroCardCover" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80" alt="현재 트랙 커버">
                   <div class="now-playing-badge">▶ 재생 중</div>
                 </div>
                 <div class="hero-card-info">
@@ -91,36 +98,6 @@
                   <button class="play-cta-btn" data-view-jump="track" aria-label="재생 화면 열기">▶ 지금 재생</button>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Horizontal scroll: 이 장소 추천 -->
-          <div class="home-section">
-            <div class="section-row">
-              <h2 class="section-title">이 장소 추천</h2>
-              <button class="text-link" data-view-jump="discover">전체 보기</button>
-            </div>
-            <div class="track-scroll-row">
-              <article class="mini-track-card">
-                <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80" alt="밤 산책">
-                <span class="mini-card-title">밤 산책</span>
-                <span class="mini-card-artist">Blue Room</span>
-              </article>
-              <article class="mini-track-card">
-                <img src="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=300&q=80" alt="여름의 계단">
-                <span class="mini-card-title">여름의 계단</span>
-                <span class="mini-card-artist">Small Wave</span>
-              </article>
-              <article class="mini-track-card">
-                <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=300&q=80" alt="오래된 책갈피">
-                <span class="mini-card-title">오래된 책갈피</span>
-                <span class="mini-card-artist">Noon Archive</span>
-              </article>
-              <article class="mini-track-card">
-                <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=300&q=80" alt="새벽 두 시">
-                <span class="mini-card-title">새벽 두 시</span>
-                <span class="mini-card-artist">City Float</span>
-              </article>
             </div>
           </div>
 
@@ -144,10 +121,6 @@
 
           <!-- Quick nav tiles -->
           <div class="quick-tiles">
-            <button class="quick-tile" data-view-jump="discover">
-              <span class="tile-icon">🎵</span>
-              <span class="tile-label">오늘의 믹스</span>
-            </button>
             <button class="quick-tile" data-view-jump="map">
               <span class="tile-icon">📍</span>
               <span class="tile-label">가까운 음악</span>
@@ -201,18 +174,6 @@
               <path class="road foot" d="M52 116 C170 156 202 96 318 128 S520 76 640 132"></path>
               <path class="route-path" d="M86 350 C180 300 252 306 346 230 S520 176 620 126"></path>
               <circle class="user-dot" id="userDot" cx="520" cy="170" r="10"></circle>
-              <g class="drop-marker selected" data-drop-index="0">
-                <circle cx="550" cy="150" r="22"></circle>
-                <text x="550" y="157">♪</text>
-              </g>
-              <g class="drop-marker" data-drop-index="1">
-                <circle cx="338" cy="230" r="20"></circle>
-                <text x="338" y="237">♪</text>
-              </g>
-              <g class="drop-marker" data-drop-index="2">
-                <circle cx="190" cy="306" r="20"></circle>
-                <text x="190" y="313">♪</text>
-              </g>
               <text class="place-label" x="500" y="116">정문 앞 카페</text>
               <text class="place-label" x="286" y="204">중앙광장</text>
               <text class="place-label" x="142" y="280">독립서점</text>
@@ -235,6 +196,13 @@
             </div>
             <button class="primary-button" id="unlockButton">듣기</button>
           </article>
+
+          <section class="play-history-panel">
+            <h3>재생된 음악 기록</h3>
+            <div class="play-history-list" id="playHistoryList">
+              <p class="status-text">아직 재생한 음악이 없습니다.</p>
+            </div>
+          </section>
 
         </section>
 
@@ -263,24 +231,20 @@
             </div>
 
             <!-- Action button -->
-            <button class="primary-button listen-action-btn" id="listenButton">72%까지 듣기</button>
+            <button class="primary-button listen-action-btn" id="playButton">▶ 노래 재생</button>
           </div>
 
-          <!-- Review panel -->
-          <article class="review-panel">
-            <h3>취향 피드백</h3>
-            <div class="segmented">
-              <button class="segment active" data-feedback="recommend">추천</button>
-              <button class="segment" data-feedback="not-recommend">취향 아님</button>
+          <!-- Rating panel -->
+          <article class="rating-panel">
+            <h3>별점 피드백</h3>
+            <div class="star-row" id="ratingStars" aria-label="별점 선택">
+              <button data-rating="1" aria-label="1점">★</button>
+              <button data-rating="2" aria-label="2점">★</button>
+              <button data-rating="3" aria-label="3점">★</button>
+              <button data-rating="4" aria-label="4점">★</button>
+              <button data-rating="5" aria-label="5점">★</button>
             </div>
-            <div class="tag-row selectable">
-              <button>장소와 잘 어울림</button>
-              <button>다시 듣고 싶음</button>
-              <button>밤 산책 감성</button>
-            </div>
-            <textarea id="reviewText">밤에 카페 앞에서 듣기 좋은 잔잔한 곡이었습니다. 보컬이 담담해서 과하지 않았고, 이 장소의 분위기와 잘 맞았습니다. 친구에게도 추천하고 싶지만 후반부 전개는 조금 단조롭게 느껴졌습니다.</textarea>
-            <button class="ghost-button" id="submitReview">리뷰 제출</button>
-            <p class="status-text" id="reviewResult">추천 음악을 70% 이상 들으면 인디코인이 지급됩니다.</p>
+            <p class="status-text" id="ratingResult">별점을 남기면 다음 추천에 반영됩니다.</p>
           </article>
 
         </section>
@@ -299,56 +263,28 @@
               <span class="points-label">Coin Balance</span>
               <strong class="points-value" id="keyBalance2"></strong>
             </div>
-            <p class="points-sub">추천 음악 70% 감상, 리뷰, 장소 발견으로 모아 쓰는 인디코인</p>
-            <div class="coin-level-row">
-              <span id="coinLevel">Level 1</span>
-              <span id="coinProgress">다음 레벨까지 25 IC</span>
-            </div>
-            <button class="text-link" data-view-jump="creator">아티스트 통계 →</button>
+            <p class="points-sub">음악 감상과 별점으로 모아 굿즈 구매나 아티스트 후원에 쓰는 인디코인</p>
           </div>
 
           <!-- Reward actions -->
           <section class="reward-panel">
             <h3>코인 샵</h3>
-            <button class="reward-item" id="spendHint">
+            <button class="reward-item" id="donateButton">
               <div class="reward-item-left">
-                <span class="reward-icon">🔍</span>
-                <span>다음 추천 보기</span>
+                <span class="reward-icon">♡</span>
+                <span>아티스트 Donate</span>
               </div>
-              <strong class="reward-cost">10 IC</strong>
+              <strong class="reward-cost">50 IC</strong>
             </button>
-            <button class="reward-item" id="levelUpButton">
+            <button class="reward-item" id="merchButton">
               <div class="reward-item-left">
-                <span class="reward-icon">⬆</span>
-                <span>인디패스 레벨업</span>
+                <span class="reward-icon">▣</span>
+                <span>굿즈 구매</span>
               </div>
-              <strong class="reward-cost">25 IC</strong>
+              <strong class="reward-cost">120 IC</strong>
             </button>
-            <button class="reward-item" id="applyDiscount">
-              <div class="reward-item-left">
-                <span class="reward-icon">🎟</span>
-                <span>공연 할인 적용</span>
-              </div>
-              <strong class="reward-cost">100 IC</strong>
-            </button>
-            <button class="reward-item" id="cashOutButton">
-              <div class="reward-item-left">
-                <span class="reward-icon">₩</span>
-                <span>현금화 신청</span>
-              </div>
-              <strong class="reward-cost">200 IC</strong>
-            </button>
-            <p class="status-text" id="walletMessage">인디코인은 음악 감상 리워드와 공연 혜택으로 사용할 수 있어요.</p>
+            <p class="status-text" id="walletMessage">인디코인은 좋아하는 아티스트 후원과 굿즈 구매에 사용할 수 있어요.</p>
           </section>
-
-          <!-- Concert ticket -->
-          <article class="ticket">
-            <p class="view-eyebrow">Booking</p>
-            <h3 class="ticket-title">Blue Room 소극장 라이브</h3>
-            <div class="price-row"><span>원가</span><strong>15,000원</strong></div>
-            <div class="price-row"><span>할인</span><strong id="discountValue">0원</strong></div>
-            <div class="price-row total"><span>최종가</span><strong id="finalPrice">15,000원</strong></div>
-          </article>
 
         </section>
 
@@ -375,8 +311,8 @@
               <strong id="metricReviews">28</strong>
             </article>
             <article class="metric">
-              <span>booking clicks</span>
-              <strong id="metricBookings">9</strong>
+              <span>support clicks</span>
+              <strong id="metricSupport">9</strong>
             </article>
           </div>
 

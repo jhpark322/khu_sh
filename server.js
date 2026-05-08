@@ -188,7 +188,7 @@ app.use(express.static(path.join(__dirname), { etag: false, lastModified: false,
 const store = {
   users: {},
   reviews: [],
-  metrics: { discoveries: 120, unlocks: 86, reviews: 28, bookings: 9 }
+  metrics: { discoveries: 120, unlocks: 86, reviews: 28, support: 9 }
 };
 
 function getUser(userId) {
@@ -196,8 +196,6 @@ function getUser(userId) {
     store.users[userId] = {
       prefs: { genres: ["indie"], moods: ["잔잔함", "밤"] },
       keys: 25,
-      level: 1,
-      cashoutRequested: false,
       unlocked: [],
       reviewed: [],
       listenRewards: [],
@@ -648,9 +646,9 @@ app.post("/api/unlock", (req, res) => {
   res.json({ ok: true, keys: user.keys, metrics: store.metrics });
 });
 
-// 리뷰 저장 + 피드백 학습
+// 별점 저장 + 피드백 학습
 app.post("/api/review", (req, res) => {
-  const { userId, trackId, trackObj, text, feedbackType, tags } = req.body;
+  const { userId, trackId, trackObj, text, feedbackType, tags, rating } = req.body;
   const user = getUser(userId || "guest");
 
   // 피드백 학습: liked/disliked 리스트 업데이트
@@ -664,21 +662,28 @@ app.post("/api/review", (req, res) => {
     }
   }
 
-  // 리뷰 품질 점수
+  const starRating = Number(rating || 0);
   let quality = 0;
-  if (text && text.length >= 80) quality += 20;
-  if (text && /분위기|잔잔|밤|감성|보컬|사운드/.test(text)) quality += 20;
-  if (text && /장소|카페|공간|거리|도서관|캠퍼스/.test(text)) quality += 20;
-  if (text && /추천|사람|친구|어울/.test(text)) quality += 20;
-  if (text && /아쉬|다만|좋았|기억|후반/.test(text)) quality += 20;
+  let reward = 10;
 
-  const reward = quality >= 80 ? 30 : quality >= 60 ? 20 : quality >= 40 ? 15 : 10;
+  if (starRating > 0) {
+    quality = Math.min(100, Math.max(20, starRating * 20));
+    reward = starRating >= 5 ? 20 : starRating >= 4 ? 15 : 10;
+  } else {
+    // 긴 텍스트 리뷰를 보내는 구버전 클라이언트 대응
+    if (text && text.length >= 80) quality += 20;
+    if (text && /분위기|잔잔|밤|감성|보컬|사운드/.test(text)) quality += 20;
+    if (text && /장소|카페|공간|거리|도서관|캠퍼스/.test(text)) quality += 20;
+    if (text && /추천|사람|친구|어울/.test(text)) quality += 20;
+    if (text && /아쉬|다만|좋았|기억|후반/.test(text)) quality += 20;
+    reward = quality >= 80 ? 30 : quality >= 60 ? 20 : quality >= 40 ? 15 : 10;
+  }
 
   if (!user.reviewed.includes(trackId)) {
     user.reviewed.push(trackId);
     user.keys += reward;
     store.metrics.reviews += 1;
-    store.reviews.push({ userId, trackId, text, feedbackType, tags, quality, reward });
+    store.reviews.push({ userId, trackId, text, feedbackType, tags, rating: starRating, quality, reward });
   }
 
   res.json({ ok: true, quality, reward, keys: user.keys, metrics: store.metrics });
@@ -690,18 +695,10 @@ app.post("/api/spend", (req, res) => {
   const user = getUser(userId || "guest");
   if (user.keys < amount) return res.json({ ok: false, message: "인디코인이 부족합니다." });
   user.keys -= amount;
-  if (purpose === "booking") {
-    store.metrics.bookings += 1;
-  } else if (purpose === "level-up") {
-    user.level += 1;
-  } else if (purpose === "cashout") {
-    user.cashoutRequested = true;
-  }
+  if (purpose === "donate" || purpose === "merch") store.metrics.support += 1;
   res.json({
     ok: true,
     keys: user.keys,
-    level: user.level,
-    cashoutRequested: user.cashoutRequested,
     metrics: store.metrics
   });
 });

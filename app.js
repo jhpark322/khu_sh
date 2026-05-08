@@ -46,10 +46,11 @@ const state = {
   listened: false,
   reviewed: false,
   discountApplied: false,
-  memberLevel: 1,
-  cashoutRequested: false,
   listenedTrackIds: new Set(),
   pendingListenRewards: new Set(),
+  playHistory: [],
+  simulatedTimer: null,
+  homePopupDismissed: false,
   activeTrack: 0,
   activeTag: "indie",
   tracks: demoTracks,
@@ -59,7 +60,7 @@ const state = {
   kakaoUserMarker: null,
   userLocation: null,
   geoWatchId: null,
-  metrics: { discoveries: 120, unlocks: 86, reviews: 28, bookings: 9 }
+  metrics: { discoveries: 120, unlocks: 86, reviews: 28, support: 9 }
 };
 
 // ── API helpers ───────────────────────────────────────────────────
@@ -100,16 +101,15 @@ const views = document.querySelectorAll(".view");
 const navButtons = document.querySelectorAll(".nav-button");
 const keyBalance = document.querySelector("#keyBalance");
 const keyBalance2 = document.querySelector("#keyBalance2");
-const coinLevel = document.querySelector("#coinLevel");
-const coinProgress = document.querySelector("#coinProgress");
 const passText = document.querySelector("#passText");
 const listenProgress = document.querySelector("#listenProgress");
-const reviewResult = document.querySelector("#reviewResult");
+const ratingResult = document.querySelector("#ratingResult");
 const walletMessage = document.querySelector("#walletMessage");
 const apiStatus = document.querySelector("#apiStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const kakaoMapContainer = document.querySelector("#kakaoMap");
 const mapCanvas = document.querySelector(".map-full");
+const homeTrackPopup = document.querySelector("#homeTrackPopup");
 
 function setView(id) {
   views.forEach((view) => view.classList.toggle("active", view.id === id));
@@ -119,6 +119,13 @@ function setView(id) {
   if (id === "map") {
     startGeolocation();
     if (state.kakaoMapReady) requestAnimationFrame(renderKakaoMap);
+    renderPlayHistory();
+  }
+  if (id === "home" && !state.homePopupDismissed) {
+    window.setTimeout(openHomePopup, 250);
+  } else if (id !== "home" && homeTrackPopup) {
+    homeTrackPopup.classList.remove("active");
+    homeTrackPopup.setAttribute("aria-hidden", "true");
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -136,26 +143,40 @@ function updateKeys() {
   const label = `${state.keys} IC`;
   if (keyBalance) keyBalance.textContent = label;
   if (keyBalance2) keyBalance2.textContent = label;
-  if (coinLevel) coinLevel.textContent = `Level ${state.memberLevel}`;
-  if (coinProgress) {
-    const nextCost = state.memberLevel * 25;
-    const remaining = Math.max(0, nextCost - state.keys);
-    coinProgress.textContent = remaining ? `다음 레벨까지 ${remaining} IC` : "레벨업 가능";
-  }
-  const levelCost = document.querySelector("#levelUpButton .reward-cost");
-  if (levelCost) levelCost.textContent = `${state.memberLevel * 25} IC`;
 }
 
 function updateMetrics() {
   document.querySelector("#metricDiscoveries").textContent = state.metrics.discoveries;
   document.querySelector("#metricUnlocks").textContent = state.metrics.unlocks;
   document.querySelector("#metricReviews").textContent = state.metrics.reviews;
-  document.querySelector("#metricBookings").textContent = state.metrics.bookings;
+  document.querySelector("#metricSupport").textContent = state.metrics.support;
 }
 
 function currentTrack() {
   return state.tracks[state.activeTrack] || state.tracks[0];
 }
+
+function openHomePopup() {
+  if (!homeTrackPopup || !document.querySelector("#home")?.classList.contains("active")) return;
+  homeTrackPopup.classList.add("active");
+  homeTrackPopup.setAttribute("aria-hidden", "false");
+}
+
+function closeHomePopup() {
+  if (!homeTrackPopup) return;
+  state.homePopupDismissed = true;
+  homeTrackPopup.classList.remove("active");
+  homeTrackPopup.setAttribute("aria-hidden", "true");
+}
+
+document.querySelector("#openHomePopup")?.addEventListener("click", () => {
+  state.homePopupDismissed = false;
+  openHomePopup();
+});
+document.querySelector("#homePopupClose")?.addEventListener("click", closeHomePopup);
+homeTrackPopup?.addEventListener("click", (event) => {
+  if (event.target === homeTrackPopup) closeHomePopup();
+});
 
 // 경희대 국제캠퍼스 (용인 기흥) 좌표
 const placeCoords = [
@@ -187,10 +208,13 @@ function setImage(element, src) {
 }
 
 function selectTrack(index, targetView = "map") {
+  stopSimulatedPlayback();
   state.activeTrack = index;
   state.unlocked = false;
   state.reviewed = false;
   syncListenStateForActiveTrack();
+  document.querySelectorAll("#ratingStars button").forEach((star) => star.classList.remove("active"));
+  if (ratingResult) ratingResult.textContent = "별점을 남기면 다음 추천에 반영됩니다.";
   renderAll();
   if (targetView) setView(targetView);
 }
@@ -260,6 +284,7 @@ function renderSelectedTrack() {
   if (distanceBar) distanceBar.style.width = `${Math.max(14, 100 - track.distance)}%`;
 
   setImage(document.querySelector("#heroCover"), track.image);
+  setImage(document.querySelector("#heroCardCover"), track.image);
   setImage(document.querySelector("#dropCover"), track.image);
   setImage(document.querySelector("#playerCover"), track.image);
   setImage(document.querySelector("#miniCover"), track.image);
@@ -285,11 +310,7 @@ function renderSelectedTrack() {
 }
 
 function renderMapMarkers() {
-  document.querySelectorAll(".drop-marker").forEach((marker) => {
-    const index = Number(marker.dataset.dropIndex);
-    marker.classList.toggle("selected", index === state.activeTrack);
-    marker.addEventListener("click", () => selectTrack(index, null));
-  });
+  renderPlayHistory();
 }
 
 function getDistanceMeters(lat1, lng1, lat2, lng2) {
@@ -312,28 +333,9 @@ function updateRealDistances() {
 }
 
 function updateKakaoUserMarker() {
-  if (!state.kakaoMapReady || !window.kakao?.maps || !state.kakaoMap || !state.userLocation) return;
-  const kakao = window.kakao;
-  const pos = new kakao.maps.LatLng(state.userLocation.lat, state.userLocation.lng);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28">
-    <circle cx="14" cy="14" r="10" fill="#509bf5" stroke="#fff" stroke-width="3"/>
-    <circle cx="14" cy="14" r="4" fill="#fff"/>
-  </svg>`;
-  const markerImage = new kakao.maps.MarkerImage(
-    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg),
-    new kakao.maps.Size(28, 28),
-    { offset: new kakao.maps.Point(14, 14) }
-  );
   if (state.kakaoUserMarker) {
-    state.kakaoUserMarker.setPosition(pos);
-  } else {
-    state.kakaoUserMarker = new kakao.maps.Marker({
-      map: state.kakaoMap,
-      position: pos,
-      title: "내 위치",
-      image: markerImage,
-      zIndex: 10
-    });
+    state.kakaoUserMarker.setMap(null);
+    state.kakaoUserMarker = null;
   }
 }
 
@@ -421,26 +423,8 @@ function renderKakaoMap() {
   }
 
   clearKakaoMarkers();
-  const bounds = new kakao.maps.LatLngBounds();
-
-  state.tracks.slice(0, 6).forEach((track, index) => {
-    const coords = coordsForTrack(track, index);
-    const position = new kakao.maps.LatLng(coords.lat, coords.lng);
-    const marker = new kakao.maps.Marker({
-      map: state.kakaoMap,
-      position,
-      title: `${track.title} - ${track.artist}`
-    });
-
-    kakao.maps.event.addListener(marker, "click", () => selectTrack(index, "map"));
-
-    state.kakaoMarkers.push(marker);
-    bounds.extend(position);
-  });
-
   state.kakaoMap.setLevel(4);
   state.kakaoMap.setCenter(activeCenter);
-  updateKakaoUserMarker();
 
   requestAnimationFrame(() => {
     state.kakaoMap.relayout();
@@ -460,10 +444,52 @@ function renderAll() {
   updateMetrics();
   renderSelectedTrack();
   renderTrackGrid();
+  renderPlayHistory();
 }
 
 const trackAudio = new Audio();
 let playingIndex = null;
+
+function addPlayHistory(track) {
+  if (!track) return;
+  const id = trackKey(track);
+  state.playHistory = [
+    { id, title: track.title, artist: track.artist, image: track.image },
+    ...state.playHistory.filter(item => item.id !== id)
+  ].slice(0, 8);
+  renderPlayHistory();
+}
+
+function renderPlayHistory() {
+  const list = document.querySelector("#playHistoryList");
+  if (!list) return;
+
+  if (!state.playHistory.length) {
+    list.innerHTML = `<p class="status-text">아직 재생한 음악이 없습니다.</p>`;
+    return;
+  }
+
+  list.innerHTML = "";
+  state.playHistory.forEach((item) => {
+    const row = document.createElement("article");
+    row.className = "history-item";
+    row.innerHTML = `
+      <img src="${item.image || ""}" alt="${item.title} 커버">
+      <div>
+        <strong>${item.title}</strong>
+        <span>${item.artist}</span>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function stopSimulatedPlayback() {
+  if (state.simulatedTimer) {
+    window.clearInterval(state.simulatedTimer);
+    state.simulatedTimer = null;
+  }
+}
 
 async function awardListenCoins(track = currentTrack(), percent = 72) {
   const id = trackKey(track);
@@ -492,7 +518,7 @@ async function awardListenCoins(track = currentTrack(), percent = 72) {
     state.listened = true;
     if (listenProgress) listenProgress.style.width = `${Math.max(70, percent)}%`;
     passText.textContent = `${Math.round(percent)}% 감상 완료 · 인디코인 +${reward} IC`;
-    reviewResult.textContent = "리뷰를 남기면 인디코인이 더 쌓입니다.";
+    if (ratingResult) ratingResult.textContent = "별점을 남기면 다음 추천에 반영됩니다.";
   }
 
   showPointsToast(reward);
@@ -500,9 +526,37 @@ async function awardListenCoins(track = currentTrack(), percent = 72) {
   return true;
 }
 
+function startSimulatedPlayback(track = currentTrack()) {
+  stopSimulatedPlayback();
+  addPlayHistory(track);
+  let percent = 0;
+  passText.textContent = "재생 중";
+  state.simulatedTimer = window.setInterval(() => {
+    percent += 7;
+    if (listenProgress) listenProgress.style.width = `${Math.min(percent, 100)}%`;
+    if (percent >= 70) awardListenCoins(track, percent);
+    if (percent >= 100) {
+      stopSimulatedPlayback();
+      passText.textContent = "재생 완료";
+    }
+  }, 350);
+}
+
+function playCurrentTrack() {
+  if (!state.unlocked) state.unlocked = true;
+  const track = currentTrack();
+  if (track.audio) {
+    playTrack(state.activeTrack);
+    return;
+  }
+  startSimulatedPlayback(track);
+}
+
 function playTrack(index) {
   const track = state.tracks[index];
   if (!track?.audio) return;
+  stopSimulatedPlayback();
+  addPlayHistory(track);
 
   if (playingIndex === index) {
     if (trackAudio.paused) {
@@ -612,15 +666,13 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
 
 async function spendCoins(amount, purpose) {
   if (state.keys < amount) {
-    walletMessage.textContent = `${amount} IC가 필요합니다. 추천 음악을 70% 이상 감상해 인디코인을 모아보세요.`;
+    walletMessage.textContent = `${amount} IC가 필요합니다. 음악을 감상하고 별점을 남겨 인디코인을 모아보세요.`;
     return null;
   }
 
   const data = await api("POST", "/api/spend", { userId: USER_ID, amount, purpose });
   if (data?.ok) {
     state.keys = data.keys;
-    if (data.level) state.memberLevel = data.level;
-    if (data.cashoutRequested !== undefined) state.cashoutRequested = data.cashoutRequested;
     if (data.metrics) state.metrics = data.metrics;
     updateKeys();
     updateMetrics();
@@ -653,91 +705,57 @@ document.querySelector("#unlockButton").addEventListener("click", async () => {
   setView("track");
 });
 
-document.querySelector("#listenButton").addEventListener("click", async () => {
-  if (!state.unlocked) {
-    passText.textContent = "먼저 지도에서 근처 음악을 선택하세요.";
-    setView("map");
-    return;
-  }
-  listenProgress.style.width = "72%";
-  const rewarded = await awardListenCoins(currentTrack(), 72);
-  if (!rewarded) {
-    passText.textContent = "72% 감상 완료 · 이미 인디코인을 받았어요.";
-    reviewResult.textContent = "리뷰를 남기면 인디코인이 더 쌓입니다.";
-  }
+document.querySelector("#playButton")?.addEventListener("click", () => {
+  playCurrentTrack();
 });
 
-document.querySelectorAll(".segment").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".segment").forEach((s) => s.classList.remove("active"));
-    button.classList.add("active");
+document.querySelectorAll("#ratingStars button").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const rating = Number(button.dataset.rating);
+    document.querySelectorAll("#ratingStars button").forEach((star) => {
+      star.classList.toggle("active", Number(star.dataset.rating) <= rating);
+    });
+
+    const track = currentTrack();
+    const feedback = rating >= 4 ? "recommend" : "not-recommend";
+    const data = await api("POST", "/api/review", {
+      userId: USER_ID,
+      trackId: track.title,
+      trackObj: track,
+      rating,
+      feedbackType: feedback
+    });
+
+    if (data && !state.reviewed) {
+      state.reviewed = true;
+      state.keys = data.keys;
+      state.metrics = data.metrics;
+      showPointsToast(data.reward);
+      ratingResult.textContent = `${rating}점 반영 완료 · +${data.reward} IC 적립`;
+    } else if (!state.reviewed) {
+      state.reviewed = true;
+      state.keys += 10;
+      ratingResult.textContent = `${rating}점 반영 완료 · +10 IC 적립`;
+    } else {
+      ratingResult.textContent = `${rating}점으로 업데이트했습니다.`;
+    }
+
+    updateKeys();
+    updateMetrics();
   });
 });
 
-document.querySelector("#submitReview").addEventListener("click", async () => {
-  if (!state.listened) {
-    reviewResult.textContent = "70% 이상 들으면 리뷰를 남길 수 있어요.";
-    return;
-  }
-  const text = document.querySelector("#reviewText").value.trim();
-  const feedback = document.querySelector(".segment.active")?.dataset.feedback || "recommend";
+document.querySelector("#donateButton")?.addEventListener("click", async () => {
   const track = currentTrack();
-
-  const data = await api("POST", "/api/review", {
-    userId: USER_ID, trackId: track.title, trackObj: track, text, feedbackType: feedback
-  });
-
-  if (data && !state.reviewed) {
-    state.reviewed = true;
-    state.keys = data.keys;
-    state.metrics = data.metrics;
-    showPointsToast(data.reward);
-    reviewResult.textContent = `리뷰 품질 ${data.quality}점 · +${data.reward} IC 적립`;
-  } else if (!state.reviewed) {
-    state.reviewed = true;
-    state.keys += 15;
-    reviewResult.textContent = "리뷰가 제출되었습니다. +15 IC 적립";
-  }
-  updateKeys();
-  updateMetrics();
+  const data = await spendCoins(50, "donate");
+  if (!data) return;
+  walletMessage.textContent = `${track.artist}에게 50 IC를 후원했습니다.`;
 });
 
-document.querySelector("#spendHint").addEventListener("click", async () => {
-  const data = await spendCoins(10, "hint");
+document.querySelector("#merchButton")?.addEventListener("click", async () => {
+  const data = await spendCoins(120, "merch");
   if (!data) return;
-  walletMessage.textContent = "다음 곡은 정문을 지나 두 번째 불빛 근처에 있습니다.";
-});
-
-document.querySelector("#levelUpButton").addEventListener("click", async () => {
-  const cost = state.memberLevel * 25;
-  const data = await spendCoins(cost, "level-up");
-  if (!data) return;
-  if (!data.level) state.memberLevel += 1;
-  walletMessage.textContent = `인디패스 Level ${state.memberLevel} 달성. 추천 우선권이 올라갔어요.`;
-  updateKeys();
-});
-
-document.querySelector("#applyDiscount").addEventListener("click", async () => {
-  if (state.discountApplied) { walletMessage.textContent = "이미 할인이 적용되었습니다."; return; }
-  const data = await spendCoins(100, "booking");
-  if (!data) return;
-  state.discountApplied = true;
-  document.querySelector("#discountValue").textContent = "2,000원";
-  document.querySelector("#finalPrice").textContent = "13,000원";
-  walletMessage.textContent = "공연 할인에 인디코인이 적용되었습니다.";
-  updateKeys();
-  updateMetrics();
-});
-
-document.querySelector("#cashOutButton").addEventListener("click", async () => {
-  if (state.cashoutRequested) {
-    walletMessage.textContent = "이미 현금화 신청이 접수되었습니다.";
-    return;
-  }
-  const data = await spendCoins(200, "cashout");
-  if (!data) return;
-  state.cashoutRequested = true;
-  walletMessage.textContent = "현금화 신청 접수 완료. 데모에서는 정산 대기 상태로 표시됩니다.";
+  walletMessage.textContent = "굿즈 구매가 완료되었습니다. 데모에서는 주문 예약 상태로 표시됩니다.";
 });
 
 renderMapMarkers();
@@ -784,6 +802,7 @@ function initOnboarding() {
     overlay.classList.remove("active");
     await applyRecommendScores();
     applyAiReasons();
+    window.setTimeout(openHomePopup, 350);
   });
 }
 
