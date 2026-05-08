@@ -134,18 +134,9 @@
           </section>
         </section>
 
-        <section id="map" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Map</p>
-            <h2>내 주변에서 바로 듣기</h2>
-          </div>
-
-          <div class="map-canvas" aria-label="근처 음악 지도">
+        <section id="map" class="view map-view">
+          <div class="map-full" aria-label="근처 음악 지도">
             <div id="kakaoMap" class="kakao-map" aria-label="카카오 지도"></div>
-            <div class="geo-pill" id="geoStatus">
-              <span class="geo-dot"></span>
-              <span id="geoStatusText">위치 확인 중...</span>
-            </div>
             <svg class="map-fallback" viewBox="0 0 720 460" role="img" aria-label="경희대 주변 인디 음악 지도">
               <rect class="map-bg" x="0" y="0" width="720" height="460"></rect>
               <path class="road main" d="M42 334 C156 252 248 294 348 218 S558 158 682 90"></path>
@@ -169,19 +160,21 @@
               <text class="place-label" x="286" y="204">중앙광장</text>
               <text class="place-label" x="142" y="280">독립서점</text>
             </svg>
+
+            <div class="geo-pill" id="geoStatus">
+              <span class="geo-dot"></span>
+              <span id="geoStatusText">위치 확인 중...</span>
+            </div>
           </div>
 
           <article class="drop-card">
             <img id="dropCover" alt="선택된 트랙 커버" src="">
-            <div>
-              <p class="eyebrow">Near You</p>
-              <h3 id="dropTitle">밤 산책</h3>
-              <p id="dropMeta">Blue Room · 정문 앞 카페 · 18m</p>
-              <div class="progress-track"><span id="distanceBar"></span></div>
-              <p class="status-text" id="unlockStatus">지금 재생 가능: 가까운 위치입니다.</p>
+            <div class="drop-card-info">
+              <strong id="dropTitle">밤 산책</strong>
+              <span id="dropMeta">Blue Room · 정문 앞 카페</span>
+              <span class="drop-distance" id="unlockStatus">18m</span>
             </div>
-            <button class="primary-button" id="unlockButton">근처에서 듣기</button>
-            <button class="ghost-button" id="moveCloserButton">내 위치 맞추기</button>
+            <button class="primary-button" id="unlockButton">듣기</button>
           </article>
         </section>
 
@@ -298,6 +291,6 @@
     </div>
 
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=dc140cc7273dca9367e4384de951ff75"></script>
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>

@@ -71,7 +71,7 @@ const apiStatus = document.querySelector("#apiStatus");
 const audioPlayer = document.querySelector("#audioPlayer");
 const clientInput = document.querySelector("#jamendoClientId");
 const kakaoMapContainer = document.querySelector("#kakaoMap");
-const mapCanvas = document.querySelector(".map-canvas");
+const mapCanvas = document.querySelector(".map-full");
 
 const storedClientId = localStorage.getItem("jamendoClientId");
 if (storedClientId) clientInput.value = storedClientId;
@@ -166,7 +166,7 @@ function renderSelectedTrack() {
   setText("#heroTrackTitle", track.title);
   setText("#heroTrackArtist", meta);
   setText("#dropTitle", track.title);
-  setText("#dropMeta", meta);
+  setText("#dropMeta", `${track.artist} · ${track.place}`);
   setText("#playerTitle", track.title);
   setText("#playerHeading", track.title);
   setText("#playerArtist", track.artist);
@@ -199,12 +199,7 @@ function renderSelectedTrack() {
   const unlockBtn = document.querySelector("#unlockButton");
   if (unlockBtn) unlockBtn.disabled = !canUnlock && !state.unlocked;
 
-  const gpsActive = state.userLocation !== null;
-  document.querySelector("#unlockStatus").textContent = canUnlock
-    ? "지금 재생 가능: 가까운 위치입니다."
-    : gpsActive
-      ? `현재 ${track.distance}m 거리 · 30m 이내로 이동하면 해금됩니다.`
-      : "조금 더 가까이 가면 바로 들을 수 있어요.";
+  setText("#unlockStatus", `${track.distance}m`);
 
   if (state.kakaoMapReady) renderKakaoMap();
 }
@@ -492,18 +487,6 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
 });
 
 document.querySelector("#loadJamendo").addEventListener("click", loadJamendoTracks);
-
-document.querySelector("#moveCloserButton").addEventListener("click", () => {
-  if (state.userLocation) {
-    startGeolocation();
-  } else {
-    const userDot = document.querySelector("#userDot");
-    userDot.setAttribute("cx", "548");
-    userDot.setAttribute("cy", "153");
-    currentTrack().distance = 8;
-    renderSelectedTrack();
-  }
-});
 
 document.querySelector("#unlockButton").addEventListener("click", () => {
   if (!state.unlocked) {
