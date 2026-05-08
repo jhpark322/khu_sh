@@ -68,6 +68,9 @@ if (storedClientId) clientInput.value = storedClientId;
 function setView(id) {
   views.forEach((view) => view.classList.toggle("active", view.id === id));
   navButtons.forEach((button) => button.classList.toggle("active", button.dataset.view === id));
+  const phoneApp = document.querySelector(".phone-app");
+  if (phoneApp) phoneApp.dataset.view = id;
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function updateKeys() {
@@ -85,10 +88,16 @@ function currentTrack() {
   return state.tracks[state.activeTrack] || state.tracks[0];
 }
 
+function setText(selector, value) {
+  const element = document.querySelector(selector);
+  if (element) element.textContent = value;
+}
+
 function setImage(element, src) {
+  if (!element) return;
   if (!src) {
     element.removeAttribute("src");
-    element.style.background = "linear-gradient(135deg, #171216, #3177c5)";
+    element.style.background = "linear-gradient(135deg, #1ed760, #121212)";
     return;
   }
   element.src = src;
@@ -125,19 +134,27 @@ function renderTrackGrid() {
 
 function renderSelectedTrack() {
   const track = currentTrack();
-  document.querySelector("#heroTrackTitle").textContent = track.title;
-  document.querySelector("#heroTrackArtist").textContent = `${track.artist} · ${track.place} · ${track.distance}m`;
-  document.querySelector("#dropTitle").textContent = track.title;
-  document.querySelector("#dropMeta").textContent = `${track.artist} · ${track.place} · ${track.distance}m`;
-  document.querySelector("#playerTitle").textContent = track.title;
-  document.querySelector("#playerHeading").textContent = track.title;
-  document.querySelector("#playerArtist").textContent = track.artist;
-  document.querySelector("#heroTags").innerHTML = track.tags.map((tag) => `<span>${tag}</span>`).join("");
-  document.querySelector("#distanceBar").style.width = `${Math.max(14, 100 - track.distance)}%`;
+  const meta = `${track.artist} · ${track.place} · ${track.distance}m`;
+  setText("#heroTrackTitle", track.title);
+  setText("#heroTrackArtist", meta);
+  setText("#dropTitle", track.title);
+  setText("#dropMeta", meta);
+  setText("#playerTitle", track.title);
+  setText("#playerHeading", track.title);
+  setText("#playerArtist", track.artist);
+  setText("#miniTitle", track.title);
+  setText("#miniArtist", track.artist);
+
+  const heroTags = document.querySelector("#heroTags");
+  if (heroTags) heroTags.innerHTML = track.tags.map((tag) => `<span>${tag}</span>`).join("");
+
+  const distanceBar = document.querySelector("#distanceBar");
+  if (distanceBar) distanceBar.style.width = `${Math.max(14, 100 - track.distance)}%`;
 
   setImage(document.querySelector("#heroCover"), track.image);
   setImage(document.querySelector("#dropCover"), track.image);
   setImage(document.querySelector("#playerCover"), track.image);
+  setImage(document.querySelector("#miniCover"), track.image);
 
   if (track.audio) {
     audioPlayer.src = track.audio;
