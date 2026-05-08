@@ -4,7 +4,7 @@
 
 ## Included
 
-- 첫 화면 중심의 인디뮤직 서비스 UI
+- 스마트폰 앱처럼 보이는 Spotify 스타일 인디뮤직 서비스 UI
 - Jamendo API 기반 실제 독립 아티스트 트랙 로딩
 - client_id 미입력 시 내장 데모 트랙 fallback
 - 지도형 근처 음악 추천, 30m 근처 재생 반경, 24시간 다시 듣기
