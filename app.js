@@ -85,6 +85,9 @@ function setView(id) {
     startGeolocation();
     if (state.kakaoMapReady) requestAnimationFrame(renderKakaoMap);
   }
+  if (id === "discover" && state.tracks === demoTracks) {
+    loadJamendoTracks();
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -136,18 +139,38 @@ function renderTrackGrid() {
   grid.innerHTML = "";
 
   state.tracks.slice(0, 6).forEach((track, index) => {
-    const button = document.createElement("button");
-    button.className = `track-card${index === state.activeTrack ? " active" : ""}`;
-    button.type = "button";
-    button.innerHTML = `
-      <img src="${track.image}" alt="${track.title} 커버">
-      <div>
-        <strong>${track.title}</strong>
-        <span>${track.artist}</span>
-        <span>${track.place} · ${track.distance}m · ${track.score}점</span>
-      </div>
+    const isActive = index === state.activeTrack;
+    const isPlaying = index === playingIndex && !trackAudio.paused;
+
+    const card = document.createElement("div");
+    card.className = `track-card${isActive ? " active" : ""}`;
+
+    const img = document.createElement("img");
+    img.src = track.image;
+    img.alt = `${track.title} 커버`;
+
+    const info = document.createElement("div");
+    info.innerHTML = `
+      <strong>${track.title}</strong>
+      <span>${track.artist}</span>
+      <span>${track.place} · ${track.distance}m</span>
     `;
-    button.addEventListener("click", () => {
+
+    const playBtn = document.createElement("button");
+    playBtn.className = "track-play-btn";
+    playBtn.setAttribute("aria-label", isPlaying ? "일시정지" : "재생");
+    playBtn.textContent = isPlaying ? "⏸" : "▶";
+    playBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.activeTrack = index;
+      playTrack(index);
+    });
+
+    card.appendChild(img);
+    card.appendChild(info);
+    card.appendChild(playBtn);
+
+    card.addEventListener("click", () => {
       state.activeTrack = index;
       state.unlocked = false;
       state.listened = false;
@@ -156,7 +179,8 @@ function renderTrackGrid() {
       renderAll();
       setView("map");
     });
-    grid.appendChild(button);
+
+    grid.appendChild(card);
   });
 }
 
@@ -378,28 +402,29 @@ function renderAll() {
   renderTrackGrid();
 }
 
-function jsonp(url) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `jamendoCallback_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const script = document.createElement("script");
-    const separator = url.includes("?") ? "&" : "?";
+const trackAudio = new Audio();
+let playingIndex = null;
 
-    window[callbackName] = (data) => {
-      delete window[callbackName];
-      script.remove();
-      resolve(data);
-    };
+function playTrack(index) {
+  const track = state.tracks[index];
+  if (!track?.audio) return;
 
-    script.onerror = () => {
-      delete window[callbackName];
-      script.remove();
-      reject(new Error("Jamendo API 요청에 실패했습니다."));
-    };
-
-    script.src = `${url}${separator}callback=${callbackName}`;
-    document.body.appendChild(script);
-  });
+  if (playingIndex === index) {
+    if (trackAudio.paused) {
+      trackAudio.play();
+    } else {
+      trackAudio.pause();
+    }
+  } else {
+    trackAudio.src = track.audio;
+    trackAudio.play();
+    playingIndex = index;
+  }
+  renderTrackGrid();
 }
+
+trackAudio.addEventListener("pause", () => renderTrackGrid());
+trackAudio.addEventListener("play", () => renderTrackGrid());
 
 function normalizeJamendoTrack(track, index) {
   const tags = [
@@ -425,17 +450,8 @@ function normalizeJamendoTrack(track, index) {
 }
 
 async function loadJamendoTracks() {
-  const clientId = clientInput.value.trim();
-  if (!clientId) {
-    state.tracks = demoTracks;
-    state.activeTrack = 0;
-    apiStatus.textContent = "client_id가 없어 내장 데모 트랙으로 돌아왔습니다.";
-    renderAll();
-    return;
-  }
-
-  localStorage.setItem("jamendoClientId", clientId);
-  apiStatus.textContent = "Jamendo에서 인디 트랙을 불러오는 중입니다.";
+  const clientId = clientInput?.value.trim() || "b0af7f33";
+  if (apiStatus) apiStatus.textContent = "Jamendo에서 인디 트랙을 불러오는 중...";
 
   const endpoint = new URL("https://api.jamendo.com/v3.0/tracks/");
   endpoint.searchParams.set("client_id", clientId);
@@ -447,10 +463,9 @@ async function loadJamendoTracks() {
   endpoint.searchParams.set("tags", state.activeTag);
 
   try {
-    const data = await jsonp(endpoint.toString());
-    if (!data.results || !data.results.length) {
-      throw new Error("검색 결과가 없습니다.");
-    }
+    const res = await fetch(endpoint.toString());
+    const data = await res.json();
+    if (!data.results?.length) throw new Error("검색 결과가 없습니다.");
 
     state.tracks = data.results.map(normalizeJamendoTrack);
     state.activeTrack = 0;
@@ -458,11 +473,11 @@ async function loadJamendoTracks() {
     state.listened = false;
     state.reviewed = false;
     listenProgress.style.width = "0";
-    apiStatus.textContent = `Jamendo 트랙 ${state.tracks.length}개로 내 주변 믹스를 만들었습니다.`;
+    if (apiStatus) apiStatus.textContent = `${state.tracks.length}개 트랙 불러옴`;
     renderAll();
   } catch (error) {
     state.tracks = demoTracks;
-    apiStatus.textContent = `${error.message} 내장 데모 트랙을 유지합니다.`;
+    if (apiStatus) apiStatus.textContent = `${error.message} · 데모 트랙으로 대체`;
     renderAll();
   }
 }
