@@ -4,11 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Where Indi</title>
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
     <meta http-equiv="Cache-Control" content="no-store">
     <meta http-equiv="Pragma" content="no-cache">
   </head>
   <body>
+
+    <!-- ── Splash ───────────────────────────────────────────────────── -->
     <div class="splash-screen" id="splashScreen" aria-label="Where Indi 시작 화면">
       <div class="splash-content">
         <div class="splash-logo">WI</div>
@@ -17,7 +19,7 @@
       </div>
     </div>
 
-    <!-- 온보딩 모달 -->
+    <!-- ── Onboarding overlay ───────────────────────────────────────── -->
     <div class="onboarding-overlay" id="onboardingOverlay">
       <div class="onboarding-sheet">
         <div class="onboarding-logo">WI</div>
@@ -52,115 +54,146 @@
       </div>
     </div>
 
+    <!-- ── Phone shell ──────────────────────────────────────────────── -->
     <div class="phone-app">
-      <header class="topbar">
-        <button class="avatar-button" data-view-jump="home" aria-label="홈으로 이동">WI</button>
-        <div>
-          <p class="eyebrow">Where Indi</p>
-          <strong class="screen-title">내 주변 인디 믹스</strong>
-        </div>
-        <div class="wallet-pill">
-          <span>Points</span>
-          <strong id="keyBalance">25K</strong>
-        </div>
-      </header>
 
       <main class="app-shell">
+
+        <!-- ══ HOME ══════════════════════════════════════════════════ -->
         <section id="home" class="view active">
-          <section class="hero-card">
-            <div class="hero-copy">
-              <p class="eyebrow">Playing near you</p>
-              <h1>지금 근처에서 들을 수 있는 인디 음악</h1>
-              <p class="hero-lead">장소, 시간, 취향을 섞어 오늘 걸음에 맞는 플레이리스트를 만듭니다.</p>
+
+          <!-- Hero: blurred cover background + now-playing card -->
+          <div class="hero-section">
+            <div class="hero-bg-blur">
+              <img id="heroCover" alt="" src="" aria-hidden="true">
             </div>
-            <img id="heroCover" alt="추천 트랙 커버" src="">
-            <div class="hero-player">
-              <div>
-                <strong id="heroTrackTitle">밤 산책</strong>
-                <span id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</span>
+            <div class="hero-gradient"></div>
+
+            <div class="hero-content">
+              <div class="hero-eyebrow">
+                <span class="app-wordmark">Where Indi</span>
+                <div class="wallet-pill">
+                  <span>Points</span>
+                  <strong id="keyBalance">25K</strong>
+                </div>
               </div>
-              <button class="round-button" data-view-jump="track" aria-label="재생 화면 열기">▶</button>
-            </div>
-          </section>
 
-          <section class="quick-grid" aria-label="빠른 실행">
-            <button data-view-jump="discover">
-              <span>오늘의 믹스</span>
-              <strong>Jamendo</strong>
-            </button>
-            <button data-view-jump="map">
-              <span>가까운 음악</span>
-              <strong>30m</strong>
-            </button>
-            <button data-view-jump="wallet">
-              <span>내 보관함</span>
-              <strong>25K</strong>
-            </button>
-            <button data-view-jump="creator">
-              <span>아티스트</span>
-              <strong>Stats</strong>
-            </button>
-          </section>
-
-          <section class="content-block">
-            <div class="section-row">
-              <h2>Made for your walk</h2>
-              <button class="text-button" data-view-jump="discover">전체 보기</button>
-            </div>
-            <div class="mix-list">
-              <article class="mix-item">
-                <img alt="밤 산책 커버" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80">
-                <div>
-                  <strong>정문 앞 카페 믹스</strong>
-                  <span>잔잔한 보컬, 늦은 밤 산책</span>
+              <div class="hero-card">
+                <div class="hero-card-cover-wrap">
+                  <img class="hero-card-cover" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80" alt="현재 트랙 커버">
+                  <div class="now-playing-badge">▶ 재생 중</div>
                 </div>
-              </article>
-              <article class="mix-item">
-                <img alt="여름의 계단 커버" src="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=500&q=80">
-                <div>
-                  <strong>중앙광장 밴드 사운드</strong>
-                  <span>청춘, 캠퍼스, 기타 톤</span>
+                <div class="hero-card-info">
+                  <p class="hero-tag-line">Playing near you</p>
+                  <strong class="hero-track-title" id="heroTrackTitle">밤 산책</strong>
+                  <span class="hero-track-artist" id="heroTrackArtist">Blue Room · 정문 앞 카페 · 18m</span>
+                  <p class="hero-ai-reason">자주 지나는 카페거리와 가까우며, 저녁 시간대와 잔잔한 인디 취향이 잘 맞습니다.</p>
+                  <button class="play-cta-btn" data-view-jump="track" aria-label="재생 화면 열기">▶ 지금 재생</button>
                 </div>
-              </article>
+              </div>
             </div>
-          </section>
-
-          <section class="home-strip" aria-label="Where Indi 핵심 지표">
-            <article class="strip-item">
-              <strong>87</strong>
-              <span>매치</span>
-            </article>
-            <article class="strip-item">
-              <strong>30m</strong>
-              <span>근처</span>
-            </article>
-            <article class="strip-item">
-              <strong>24h</strong>
-              <span>다시 듣기</span>
-            </article>
-          </section>
-        </section>
-
-        <section id="discover" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Search</p>
-            <h2>내 주변 인디 트랙</h2>
           </div>
 
-          <div class="filter-row" aria-label="음악 분위기 선택" style="margin-top:12px">
+          <!-- Horizontal scroll: 이 장소 추천 -->
+          <div class="home-section">
+            <div class="section-row">
+              <h2 class="section-title">이 장소 추천</h2>
+              <button class="text-link" data-view-jump="discover">전체 보기</button>
+            </div>
+            <div class="track-scroll-row">
+              <article class="mini-track-card">
+                <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80" alt="밤 산책">
+                <span class="mini-card-title">밤 산책</span>
+                <span class="mini-card-artist">Blue Room</span>
+              </article>
+              <article class="mini-track-card">
+                <img src="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=300&q=80" alt="여름의 계단">
+                <span class="mini-card-title">여름의 계단</span>
+                <span class="mini-card-artist">Small Wave</span>
+              </article>
+              <article class="mini-track-card">
+                <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=300&q=80" alt="오래된 책갈피">
+                <span class="mini-card-title">오래된 책갈피</span>
+                <span class="mini-card-artist">Noon Archive</span>
+              </article>
+              <article class="mini-track-card">
+                <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=300&q=80" alt="새벽 두 시">
+                <span class="mini-card-title">새벽 두 시</span>
+                <span class="mini-card-artist">City Float</span>
+              </article>
+            </div>
+          </div>
+
+          <!-- Stats strip -->
+          <div class="stats-strip">
+            <div class="stat-item">
+              <strong>87</strong>
+              <span>매치 점수</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <strong>30m</strong>
+              <span>가장 근처</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <strong>3곡</strong>
+              <span>발견됨</span>
+            </div>
+          </div>
+
+          <!-- Quick nav tiles -->
+          <div class="quick-tiles">
+            <button class="quick-tile" data-view-jump="discover">
+              <span class="tile-icon">🎵</span>
+              <span class="tile-label">오늘의 믹스</span>
+            </button>
+            <button class="quick-tile" data-view-jump="map">
+              <span class="tile-icon">📍</span>
+              <span class="tile-label">가까운 음악</span>
+            </button>
+            <button class="quick-tile" data-view-jump="wallet">
+              <span class="tile-icon">⭐</span>
+              <span class="tile-label">내 보관함</span>
+            </button>
+            <button class="quick-tile" data-view-jump="creator">
+              <span class="tile-icon">📊</span>
+              <span class="tile-label">아티스트 통계</span>
+            </button>
+          </div>
+
+        </section>
+
+        <!-- ══ DISCOVER ══════════════════════════════════════════════ -->
+        <section id="discover" class="view">
+
+          <div class="view-header">
+            <p class="view-eyebrow">Discover</p>
+            <h2 class="view-title">내 취향 트랙</h2>
+          </div>
+
+          <!-- Genre filter chips -->
+          <div class="filter-row" aria-label="장르 필터">
             <button class="filter-chip active" data-tag="indie">indie</button>
             <button class="filter-chip" data-tag="acoustic">acoustic</button>
             <button class="filter-chip" data-tag="lofi">lofi</button>
             <button class="filter-chip" data-tag="ambient">ambient</button>
           </div>
-          <p class="status-text" id="apiStatus" style="margin-top:8px;padding:0 2px"></p>
 
-          <div class="track-grid" id="trackGrid" aria-label="불러온 인디 트랙" style="margin-top:16px"></div>
+          <p class="status-text" id="apiStatus"></p>
+
+          <!-- Track list -->
+          <div class="track-grid" id="trackGrid" aria-label="인디 트랙 목록"></div>
+
         </section>
 
+        <!-- ══ MAP ══════════════════════════════════════════════════ -->
         <section id="map" class="view map-view">
+
+          <!-- Full-screen map area -->
           <div class="map-full" aria-label="근처 음악 지도">
             <div id="kakaoMap" class="kakao-map" aria-label="카카오 지도"></div>
+
             <svg class="map-fallback" viewBox="0 0 720 460" role="img" aria-label="경희대 주변 인디 음악 지도">
               <rect class="map-bg" x="0" y="0" width="720" height="460"></rect>
               <path class="road main" d="M42 334 C156 252 248 294 348 218 S558 158 682 90"></path>
@@ -185,12 +218,14 @@
               <text class="place-label" x="142" y="280">독립서점</text>
             </svg>
 
+            <!-- GPS status pill -->
             <div class="geo-pill" id="geoStatus">
               <span class="geo-dot"></span>
               <span id="geoStatusText">위치 확인 중...</span>
             </div>
           </div>
 
+          <!-- Bottom track card -->
           <article class="drop-card">
             <img id="dropCover" alt="선택된 트랙 커버" src="">
             <div class="drop-card-info">
@@ -200,19 +235,38 @@
             </div>
             <button class="primary-button" id="unlockButton">듣기</button>
           </article>
+
         </section>
 
+        <!-- ══ TRACK / PLAYER ════════════════════════════════════════ -->
         <section id="track" class="view">
-          <section class="now-playing-screen">
-            <img id="playerCover" alt="재생 중인 트랙 커버" src="">
-            <p class="eyebrow" id="playerArtist">Blue Room</p>
-            <h2 id="playerHeading">밤 산책</h2>
-            <p id="passText">근처 음악을 선택하면 바로 재생할 수 있어요.</p>
-            <audio id="audioPlayer" controls preload="none"></audio>
-            <div class="listen-bar"><span id="listenProgress"></span></div>
-            <button class="primary-button" id="listenButton">72%까지 듣기</button>
-          </section>
 
+          <div class="now-playing-screen">
+            <!-- Album art -->
+            <div class="player-cover-wrap">
+              <img id="playerCover" alt="재생 중인 트랙 커버" src="">
+            </div>
+
+            <!-- Track info -->
+            <p class="player-eyebrow" id="playerArtist">Blue Room</p>
+            <h2 class="player-title" id="playerHeading">밤 산책</h2>
+            <!-- playerTitle: alias used by renderSelectedTrack, kept hidden -->
+            <span id="playerTitle" style="display:none" aria-hidden="true"></span>
+            <p class="player-pass-text" id="passText">근처 음악을 선택하면 바로 재생할 수 있어요.</p>
+
+            <!-- Hidden audio element (JS controls playback) -->
+            <audio id="audioPlayer" preload="none" style="display:none"></audio>
+
+            <!-- Progress bar -->
+            <div class="listen-bar">
+              <span id="listenProgress"></span>
+            </div>
+
+            <!-- Action button -->
+            <button class="primary-button listen-action-btn" id="listenButton">72%까지 듣기</button>
+          </div>
+
+          <!-- Review panel -->
           <article class="review-panel">
             <h3>취향 피드백</h3>
             <div class="segmented">
@@ -228,56 +282,87 @@
             <button class="ghost-button" id="submitReview">리뷰 제출</button>
             <p class="status-text" id="reviewResult">70% 이상 들으면 취향 포인트가 쌓입니다.</p>
           </article>
+
         </section>
 
+        <!-- ══ WALLET / LIBRARY ══════════════════════════════════════ -->
         <section id="wallet" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Your Library</p>
-            <h2>저장한 음악</h2>
+
+          <div class="view-header">
+            <p class="view-eyebrow">Your Library</p>
+            <h2 class="view-title">저장한 음악</h2>
           </div>
 
-          <article class="library-card">
-            <div>
-              <span>Indi Points</span>
-              <strong>오늘 취향 포인트를 모아 공연 혜택으로 연결</strong>
+          <!-- Points card -->
+          <div class="points-card">
+            <div class="points-card-top">
+              <span class="points-label">Indi Points</span>
+              <strong class="points-value" id="keyBalance2"></strong>
             </div>
-            <button class="text-button" data-view-jump="creator">아티스트 통계</button>
-          </article>
+            <p class="points-sub">오늘 취향 포인트를 모아 공연 혜택으로 연결</p>
+            <button class="text-link" data-view-jump="creator">아티스트 통계 →</button>
+          </div>
 
+          <!-- Reward actions -->
           <section class="reward-panel">
             <h3>내 음악 혜택</h3>
             <button class="reward-item" id="spendHint">
-              <span>다음 추천 보기</span>
-              <strong>10K</strong>
+              <div class="reward-item-left">
+                <span class="reward-icon">🔍</span>
+                <span>다음 추천 보기</span>
+              </div>
+              <strong class="reward-cost">10K</strong>
             </button>
             <button class="reward-item" id="applyDiscount">
-              <span>공연 할인 적용</span>
-              <strong>100K</strong>
+              <div class="reward-item-left">
+                <span class="reward-icon">🎟</span>
+                <span>공연 할인 적용</span>
+              </div>
+              <strong class="reward-cost">100K</strong>
             </button>
             <p class="status-text" id="walletMessage">추천을 열거나 예약 할인 시뮬레이션을 확인하세요.</p>
           </section>
 
+          <!-- Concert ticket -->
           <article class="ticket">
-            <p class="eyebrow">Booking</p>
-            <h3>Blue Room 소극장 라이브</h3>
+            <p class="view-eyebrow">Booking</p>
+            <h3 class="ticket-title">Blue Room 소극장 라이브</h3>
             <div class="price-row"><span>원가</span><strong>15,000원</strong></div>
             <div class="price-row"><span>할인</span><strong id="discountValue">0원</strong></div>
             <div class="price-row total"><span>최종가</span><strong id="finalPrice">15,000원</strong></div>
           </article>
+
         </section>
 
+        <!-- ══ CREATOR ════════════════════════════════════════════════ -->
         <section id="creator" class="view">
-          <div class="section-heading">
-            <p class="eyebrow">Creator</p>
-            <h2>장소별 반응</h2>
+
+          <div class="view-header">
+            <p class="view-eyebrow">Creator</p>
+            <h2 class="view-title">장소별 반응</h2>
           </div>
 
+          <!-- 2×2 metric grid -->
           <div class="dashboard-grid">
-            <article class="metric"><span>discoveries</span><strong id="metricDiscoveries">120</strong></article>
-            <article class="metric"><span>plays</span><strong id="metricUnlocks">86</strong></article>
-            <article class="metric"><span>reviews</span><strong id="metricReviews">28</strong></article>
-            <article class="metric"><span>booking clicks</span><strong id="metricBookings">9</strong></article>
+            <article class="metric">
+              <span>discoveries</span>
+              <strong id="metricDiscoveries">120</strong>
+            </article>
+            <article class="metric">
+              <span>plays</span>
+              <strong id="metricUnlocks">86</strong>
+            </article>
+            <article class="metric">
+              <span>reviews</span>
+              <strong id="metricReviews">28</strong>
+            </article>
+            <article class="metric">
+              <span>booking clicks</span>
+              <strong id="metricBookings">9</strong>
+            </article>
           </div>
+
+          <!-- Keyword tags + bar chart -->
           <article class="insight-panel">
             <h3>반응 키워드</h3>
             <div class="tag-row">
@@ -293,28 +378,48 @@
               <div style="height: 64%"><span>카페</span></div>
             </div>
           </article>
+
         </section>
+
       </main>
 
+      <!-- ── Mini player (above bottom nav) ──────────────────────── -->
       <aside class="mini-player" data-view-jump="track" aria-label="미니 플레이어">
         <img id="miniCover" alt="현재 트랙 커버" src="">
-        <div>
+        <div class="mini-info">
           <strong id="miniTitle">밤 산책</strong>
           <span id="miniArtist">Blue Room</span>
         </div>
         <button class="mini-play" aria-label="재생 화면 열기">▶</button>
       </aside>
 
+      <!-- ── Bottom nav ────────────────────────────────────────────── -->
       <nav class="bottom-nav" aria-label="앱 탭">
-        <button class="nav-button active" data-view="home"><span>⌂</span>홈</button>
-        <button class="nav-button" data-view="discover"><span>⌕</span>검색</button>
-        <button class="nav-button" data-view="map"><span>◎</span>지도</button>
-        <button class="nav-button" data-view="track"><span>♪</span>재생</button>
-        <button class="nav-button" data-view="wallet"><span>▣</span>보관함</button>
+        <button class="nav-button active" data-view="home">
+          <span class="nav-icon">🏠</span>
+          <span>홈</span>
+        </button>
+        <button class="nav-button" data-view="discover">
+          <span class="nav-icon">🔍</span>
+          <span>검색</span>
+        </button>
+        <button class="nav-button" data-view="map">
+          <span class="nav-icon">📍</span>
+          <span>지도</span>
+        </button>
+        <button class="nav-button" data-view="track">
+          <span class="nav-icon">🎵</span>
+          <span>재생</span>
+        </button>
+        <button class="nav-button" data-view="wallet">
+          <span class="nav-icon">⭐</span>
+          <span>보관함</span>
+        </button>
       </nav>
-    </div>
+
+    </div><!-- /.phone-app -->
 
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=dc140cc7273dca9367e4384de951ff75"></script>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
   </body>
 </html>
