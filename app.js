@@ -81,9 +81,6 @@ function setView(id) {
     startGeolocation();
     if (state.kakaoMapReady) requestAnimationFrame(renderKakaoMap);
   }
-  if (id === "discover" && state.tracks === demoTracks) {
-    loadJamendoTracks();
-  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -610,4 +607,5 @@ window.addEventListener("load", () => {
     splashScreen?.remove();
   }, 2400);
   initializeKakaoMap();
+  loadJamendoTracks();
 });
