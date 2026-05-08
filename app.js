@@ -308,42 +308,6 @@ function startGeolocation() {
   );
 }
 
-function loadKakaoMapsSdk(appKey) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error("응답 시간 초과 — 카카오 콘솔 > 플랫폼 > Web 에 localhost:4173 과 127.0.0.1:4173 을 모두 등록했는지 확인하세요."));
-    }, 10000);
-
-    if (window.kakao?.maps?.Map) {
-      clearTimeout(timeout);
-      resolve();
-      return;
-    }
-
-    const oldScript = document.querySelector("#kakaoMapsSdk");
-    if (oldScript) oldScript.remove();
-    delete window.kakao;
-
-    const script = document.createElement("script");
-    script.id = "kakaoMapsSdk";
-    script.dataset.appKey = appKey;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}`;
-    script.addEventListener("load", () => {
-      clearTimeout(timeout);
-      if (window.kakao?.maps?.Map) {
-        resolve();
-      } else {
-        reject(new Error("SDK 로드됐지만 맵 초기화 실패 — JavaScript 키인지 확인하세요."));
-      }
-    });
-    script.addEventListener("error", () => {
-      clearTimeout(timeout);
-      reject(new Error("SDK 파일을 불러오지 못했습니다. 네트워크를 확인하세요."));
-    });
-    document.head.appendChild(script);
-  });
-}
-
 function clearKakaoMarkers() {
   state.kakaoMarkers.forEach((marker) => marker.setMap(null));
   state.kakaoMarkers = [];
@@ -401,27 +365,15 @@ function renderKakaoMap() {
   });
 }
 
-async function initializeKakaoMap() {
-  const appKey = kakaoMapKeyInput?.value.trim();
-  if (!appKey) {
-    if (kakaoMapStatus) kakaoMapStatus.textContent = "Kakao JavaScript 키를 넣으면 실제 카카오맵으로 전환됩니다.";
+function initializeKakaoMap() {
+  if (!window.kakao?.maps?.Map) {
+    if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵 로드 실패 — 콘솔(F12)에서 오류를 확인하세요.";
     return;
   }
-
-  localStorage.setItem("kakaoMapJavaScriptKey", appKey);
-  if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵을 불러오는 중입니다.";
-
-  try {
-    await loadKakaoMapsSdk(appKey);
-    state.kakaoMapReady = true;
-    mapCanvas?.classList.add("kakao-active");
-    renderKakaoMap();
-    if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵 연결 완료. 트랙 위치를 실제 지도 위에 표시합니다.";
-  } catch (error) {
-    state.kakaoMapReady = false;
-    mapCanvas?.classList.remove("kakao-active");
-    if (kakaoMapStatus) kakaoMapStatus.textContent = `${error.message} 데모 지도를 유지합니다.`;
-  }
+  state.kakaoMapReady = true;
+  mapCanvas?.classList.add("kakao-active");
+  renderKakaoMap();
+  if (kakaoMapStatus) kakaoMapStatus.textContent = "카카오맵 연결 완료.";
 }
 
 function renderAll() {
@@ -657,11 +609,6 @@ renderAll();
 
 document.querySelector(".phone-app").dataset.view = "home";
 
-if (kakaoMapKeyInput && !kakaoMapKeyInput.value) {
-  kakaoMapKeyInput.value = "dc140cc7273dca9367e4384de951ff75";
-}
-initializeKakaoMap();
-
 window.addEventListener("load", () => {
   const splashScreen = document.querySelector("#splashScreen");
   window.setTimeout(() => {
@@ -670,4 +617,5 @@ window.addEventListener("load", () => {
   window.setTimeout(() => {
     splashScreen?.remove();
   }, 2400);
+  initializeKakaoMap();
 });
